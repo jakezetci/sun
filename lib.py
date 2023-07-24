@@ -6,19 +6,92 @@ Created on Thu Jul 20 22:37:22 2023
 """
 import numpy as np
 import scipy.integrate as integrate
-from numpy import sqrt
 import sunpy.map
+import math
+
+
+def ll2pt(lat, lon):
+    """
+    Latitude, longitude -> spherical phi, theta
+
+    """
+    if lon >= 0:
+        return math.radians(lon), math.radians(90-lat)
+    else:
+        return math.radians(360+lon), math.radians(90-lat)
+
+
+def pt2ll(phi, theta):
+    """
+    Spherical phi, theta -> latitude, longitude
+
+    """
+    if phi <= math.pi:
+        return math.degrees(math.pi/2 - theta), math.degrees(phi)
+    else:
+        return math.degrees(math.pi/2 - theta), math.degrees(phi - 2*math.pi)
+
+
+def xyz2ll(x, y, z):
+    r = math.sqrt(x**2 + y**2 + z**2)
+    theta = math.acos(z/r)
+    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
+    return r, pt2ll(phi, theta)
+
+
+def ll2xyz(lat, lon, r=696340):
+    phi, theta = ll2pt(lat, lon)
+    x = r * math.sin(theta) * math.cos(phi)
+    y = r * math.sin(theta) * math.sin(phi)
+    z = r * math.cos(theta)
+    return x, y, z
+
+
+def pt2xyz(phi, theta, r=696340):
+    x = r * math.sin(theta) * math.cos(phi)
+    y = r * math.sin(theta) * math.sin(phi)
+    z = r * math.cos(theta)
+    return x, y, z
+
+
+def distance_sphere(a, b, R):
+
+    lat1, lon1 = a
+    lat2, lon2 = b
+    phi_1 = math.radians(lat1)
+    phi_2 = math.radians(lat2)
+
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    d = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
+    c = 2 * math.atan2(math.sqrt(d), math.sqrt(1 - d))
+    km = R * c
+    return km
+
+
+def find_nearest(array, point, R=696340):
+    array = np.asarray(array)
+    dist_arr = np.asarray([np.abs(distance_sphere(
+        a, point, R)) for a in array])
+    idx = dist_arr.argmin()
+    return array[idx], idx
+
+# from here on now axis Z refers to the line of sight
+# line of sight is meant to be lined up with the centre of the Sun, (0,0)
+# so far we assume that sun isn't moving so line of sight is at (0,0)
 
 
 def I1(r1, r2):
     x, y, z = r1 - r2
     return z/((x**2 + y**2)*np.linalg.norm(r1-r2))
 
+
 def I2(r1, r2):
     x, y, z = r1 - r2
     num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
+
 
 def I3(r1, r2):
     x, y, z = r1 - r2
@@ -28,19 +101,23 @@ def I3(r1, r2):
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
 
+
 def lI1(r1, r2):
     x, y, z = r1 - r2
     return 1/(x**2 + y**2)
+
 
 def lI2(r1, r2):
     x, y, z = r1 - r2
     return 1/(3 * (x**2 + y**2)**2)
 
+
 def lI3(r1, r2):
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    return (x**2 + y**2 +2*z2**2)/(3*(x**2 + y**2)**2)
+    return (x**2 + y**2 + 2 * z2**2)/(3 * (x**2 + y**2)**2)
+
 
 def GreenBl(r1, r2, a=696340):
     x, y, z = r1 - r2
@@ -53,26 +130,51 @@ def GreenBl(r1, r2, a=696340):
     G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
     return np.array([G1, G2, G3])/(4*np.pi*a)
 
+
 class grid:
-    def __init__(self, matrix=False, latitudes=False, longitudes=False):
-        if matrix == False:
+    def __init__(self, r, matrix=False, latitudes=False, longitudes=False,
+                 uniformgrid=False):
+        if matrix is False:
             if latitudes.size != longitudes.size:
                 raise ValueError('longitudes size does not match latitudes')
             self.num = np.size(latitudes)[0]
             self.values = np.zeros_like(latitudes)
+            self.lat = latitudes
+            self.lon = longitudes
+            self.latlon = zip(latitudes, longitudes)
             self.lat = matrix[0]
             self.long = matrix.T[0]
         else:
             self.num = np.size(matrix)[0]
             self.values = np.zeros_like(matrix)
-            self.lat = latitudes
-            self.lon = longitudes
-            self.latlon = zip(latitudes, longitudes)
+            self.lat = matrix[0]
+            self.lon = matrix.T[0]
+            self.latlon = zip(self.lan, self.lon)
+        self.r = r
+
 
     def set_value(self, value, lat, lon):
         i = np.argwhere(self.latlon == (lat, lon))
         self.values[i] = value
 
+    def find_value(self, lat, lon):
+        coor, ind = find_nearest(self.latlon, (lat, lon), R=self.r)
+        return self.values[ind]
+
 def B_comp(r, grid, B_map):
-    latitudes = grid.lat
-    
+    """
+    r в формате сферических координат (r, phi, theta)
+    """
+    B = 0
+    rad, phi, theta = r
+    r_xyz = pt2xyz(rad, phi, theta)
+    for coor in grid.latlon:
+        lat, lon = coor
+        r_2 = ll2xyz(lat, lon, grid.r)
+        B_l = B_map.find_value(lat, lon)
+        B = B + B_l * GreenBl(r_xyz, r_2)
+    return B
+
+
+if __name__ == "__main__":
+    pass
