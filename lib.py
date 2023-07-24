@@ -53,6 +53,11 @@ def pt2xyz(phi, theta, r=696340):
     z = r * math.cos(theta)
     return x, y, z
 
+def xyz2pt(x, y, z):
+    r = math.sqrt(x**2 + y**2 + z**2)
+    theta = math.acos(z/r)
+    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
+    return r, phi, theta
 
 def distance_sphere(a, b, R):
 
@@ -129,6 +134,28 @@ def GreenBl(r1, r2, a=696340):
     G2 = 2*y1*(i1-li1) - 3 * y * ((x1**2 + y**2 - a**2)*(i2-li2)+(i3+li3))
     G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
     return np.array([G1, G2, G3])/(4*np.pi*a)
+
+
+class coordinates:
+    def __init__(self, r1, r2, r3, spherical=False, latlon=False):
+        if spherical is True:
+            self.r, self.phi, self.theta = r1, r2, r3
+            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
+            self.lat, self.lon = pt2ll(self.phi, self.theta)
+        elif latlon is True:
+            self.r, self.lat, self.lon = r1, r2, r3
+            self.phi, self.theta = ll2pt(self.lat, self.lon)
+            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
+        else:
+            self.x, self.y, self.z = r1, r2, r3
+            self.phi, self.theta = xyz2ll(self.x, self.y, self.z)
+
+class cell:
+    def __init__(self, center, hs, sizeType=deg):
+        self.center = center
+        self.leftborder, self.rightborder = center.lon - hs, center.lon + hs
+        # we pretend that cells are small enough to be considered plane
+        self.area = center.r**2 * 4 * hs**2
 
 
 class grid:
