@@ -125,6 +125,7 @@ def lI3(r1, r2):
 
 
 def GreenBl(r1, r2, a=696340):
+    r1, r2 = [r1.x, r1.y, r1.z], [r2.x, r2.y, r2.z]
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
@@ -150,33 +151,36 @@ class coordinates:
             self.x, self.y, self.z = r1, r2, r3
             self.phi, self.theta = xyz2ll(self.x, self.y, self.z)
 
+
 class cell:
-    def __init__(self, center, hs, sizeType=deg):
+    def __init__(self, center, hs, sizeType='deg'):
         self.center = center
         self.leftborder, self.rightborder = center.lon - hs, center.lon + hs
         # we pretend that cells are small enough to be considered plane
         self.area = center.r**2 * 4 * hs**2
+        self.value = 0
 
+    def set_value(self, value):
+        self.value = value
 
 class grid:
-    def __init__(self, r, matrix=False, latitudes=False, longitudes=False,
-                 uniformgrid=False):
-        if matrix is False:
-            if latitudes.size != longitudes.size:
-                raise ValueError('longitudes size does not match latitudes')
-            self.num = np.size(latitudes)[0]
-            self.values = np.zeros_like(latitudes)
-            self.lat = latitudes
-            self.lon = longitudes
-            self.latlon = zip(latitudes, longitudes)
-            self.lat = matrix[0]
-            self.long = matrix.T[0]
-        else:
-            self.num = np.size(matrix)[0]
-            self.values = np.zeros_like(matrix)
-            self.lat = matrix[0]
-            self.lon = matrix.T[0]
-            self.latlon = zip(self.lan, self.lon)
+    def __init__(self, r, latitudes, longitudes, hs,
+                 uniformgrid=True):
+        if latitudes.size != longitudes.size:
+            raise ValueError('longitudes size does not match latitudes')
+        self.num = np.size(latitudes)[0]
+        self.values = np.zeros_like(latitudes)
+        if uniformgrid is False:
+            self.cells = []
+            self.area = False
+            for lat, lon, size in zip(latitudes, longitudes, hs):
+                center = coordinates(r, lat, lon, latlon=True)
+                self.cells.append(cell(center, size))
+
+        self.lat = latitudes
+        self.lon = longitudes
+        self.latlon = zip(latitudes, longitudes)
+        self.area = np.full_like(latitudes, ((hs * r * 2)**2))
         self.r = r
 
 
@@ -190,16 +194,15 @@ class grid:
 
 def B_comp(r, grid, B_map):
     """
-    r в формате сферических координат (r, phi, theta)
+    r класса coordinates
     """
     B = 0
-    rad, phi, theta = r
-    r_xyz = pt2xyz(rad, phi, theta)
-    for coor in grid.latlon:
+    R = grid.r
+    for coor, S in zip(grid.latlon, grid.area):
         lat, lon = coor
-        r_2 = ll2xyz(lat, lon, grid.r)
+        r_2 = coordinates(R, lat, lon, latlon=True)
         B_l = B_map.find_value(lat, lon)
-        B = B + B_l * GreenBl(r_xyz, r_2)
+        B = B + B_l * GreenBl(r, r_2) * S
     return B
 
 
