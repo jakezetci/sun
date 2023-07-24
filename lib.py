@@ -54,9 +54,25 @@ def GreenBl(r1, r2, a=696340):
     return np.array([G1, G2, G3])/(4*np.pi*a)
 
 class grid:
-    
-    def __init__(self, matrix):
-        self.num = np.size[0]
+    def __init__(self, matrix=False, latitudes=False, longitudes=False):
+        if matrix == False:
+            if latitudes.size != longitudes.size:
+                raise ValueError('longitudes size does not match latitudes')
+            self.num = np.size(latitudes)[0]
+            self.values = np.zeros_like(latitudes)
+            self.lat = matrix[0]
+            self.long = matrix.T[0]
+        else:
+            self.num = np.size(matrix)[0]
+            self.values = np.zeros_like(matrix)
+            self.lat = latitudes
+            self.lon = longitudes
+            self.latlon = zip(latitudes, longitudes)
 
-def B_comp(r, grid):
+    def set_value(self, value, lat, lon):
+        i = np.argwhere(self.latlon == (lat, lon))
+        self.values[i] = value
+
+def B_comp(r, grid, B_map):
+    latitudes = grid.lat
     
