@@ -9,6 +9,7 @@ import scipy.integrate as integrate
 import sunpy.map
 import math
 
+from coordinates import coordinates
 
 def ll2pt(lat, lon):
     """
@@ -137,21 +138,6 @@ def GreenBl(r1, r2, a=696340):
     return np.array([G1, G2, G3])/(4*np.pi*a)
 
 
-class coordinates:
-    def __init__(self, r1, r2, r3, spherical=False, latlon=False):
-        if spherical is True:
-            self.r, self.phi, self.theta = r1, r2, r3
-            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
-            self.lat, self.lon = pt2ll(self.phi, self.theta)
-        elif latlon is True:
-            self.r, self.lat, self.lon = r1, r2, r3
-            self.phi, self.theta = ll2pt(self.lat, self.lon)
-            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
-        else:
-            self.x, self.y, self.z = r1, r2, r3
-            self.phi, self.theta = xyz2ll(self.x, self.y, self.z)
-
-
 class cell:
     def __init__(self, center, hs, sizeType='deg'):
         self.center = center
@@ -162,6 +148,7 @@ class cell:
 
     def set_value(self, value):
         self.value = value
+
 
 class grid:
     def __init__(self, r, latitudes, longitudes, hs,
