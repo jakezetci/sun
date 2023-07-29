@@ -6,7 +6,6 @@ Created on Thu Jul 20 22:37:22 2023
 """
 import numpy as np
 import scipy.integrate as integrate
-import sunpy.map
 import math
 
 from coordinates import coordinates
@@ -155,7 +154,7 @@ class grid:
                  uniformgrid=True):
         if latitudes.size != longitudes.size:
             raise ValueError('longitudes size does not match latitudes')
-        self.num = np.size(latitudes)[0]
+        self.num = np.size(latitudes)
         self.values = np.zeros_like(latitudes)
         if uniformgrid is False:
             self.cells = []
@@ -166,7 +165,7 @@ class grid:
 
         self.lat = latitudes
         self.lon = longitudes
-        self.latlon = zip(latitudes, longitudes)
+        self.latlon = np.asarray(zip(latitudes, longitudes))
         self.area = np.full_like(latitudes, ((hs * r * 2)**2))
         self.r = r
 

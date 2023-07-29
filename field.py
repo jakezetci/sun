@@ -5,12 +5,11 @@ Created on Tue Jul 25 15:58:55 2023
 @author: cosbo
 """
 
-import numpy as np
 from coordinates import coordinates
 import math
 
 
-def B_dipole(r, B0, R=696340, returnBl=True):
+def B_dipole(r, B0=1000, R=696340, returnBl=True):
     """
     r класса coordinates
     """
@@ -22,3 +21,7 @@ def B_dipole(r, B0, R=696340, returnBl=True):
                 B_theta * math.cos(r.theta)) * math.cos(r.phi))
     else:
         return [B_r, 0, B_theta]
+
+
+if __name__ == "__main__":
+    pass
