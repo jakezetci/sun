@@ -75,7 +75,7 @@ def distance_sphere(a, b, R):
 
 
 def find_nearest(array, point, R=696340):
-    array = np.asarray(array)
+    array = list(map(list, array))
     dist_arr = np.asarray([np.abs(distance_sphere(
         a, point, R)) for a in array])
     idx = dist_arr.argmin()
@@ -125,12 +125,12 @@ def lI3(r1, r2):
 
 
 def GreenBl(r1, r2, a=696340):
-    r1, r2 = [r1.x, r1.y, r1.z], [r2.x, r2.y, r2.z]
+    r1, r2 = np.asarray([r1.x, r1.y, r1.z]), np.asarray([r2.x, r2.y, r2.z])
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
     i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
-    li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), (r1, r2)
+    li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
     G1 = 2*x1*(i1-li1) - 3 * x * ((x1**2 + y**2 - a**2)*(i2-li2)+(i3+li3))
     G2 = 2*y1*(i1-li1) - 3 * y * ((x1**2 + y**2 - a**2)*(i2-li2)+(i3+li3))
     G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
@@ -162,19 +162,24 @@ class grid:
             for lat, lon, size in zip(latitudes, longitudes, hs):
                 center = coordinates(r, lat, lon, latlon=True)
                 self.cells.append(cell(center, size))
-
         self.lat = latitudes
         self.lon = longitudes
-        self.latlon = np.asarray(zip(latitudes, longitudes))
+        self.latlon = list(map(list, zip(latitudes, longitudes)))
+
         self.area = np.full_like(latitudes, ((hs * r * 2)**2))
         self.r = r
 
 
     def set_value(self, value, lat, lon):
-        i = np.argwhere(self.latlon == (lat, lon))
+        aa = np.asarray(self.latlon)
+        bb = np.asarray(aa == [lat,lon])
+        cc = list(bb)
+        dd = [c[0] * c[1] for c in cc]
+        i = np.argwhere(dd)[0]
         self.values[i] = value
 
     def find_value(self, lat, lon):
+        tt = list(map(list, self.latlon))
         coor, ind = find_nearest(self.latlon, (lat, lon), R=self.r)
         return self.values[ind]
 
@@ -182,13 +187,14 @@ def B_comp(r, grid, B_map):
     """
     r класса coordinates
     """
-    B = 0
+    B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
     R = grid.r
     for coor, S in zip(grid.latlon, grid.area):
         lat, lon = coor
         r_2 = coordinates(R, lat, lon, latlon=True)
         B_l = B_map.find_value(lat, lon)
-        B = B + B_l * GreenBl(r, r_2) * S
+        add = B_l * np.asarray(GreenBl(r, r_2)) * S
+        B = B + add
     return B
 
 
