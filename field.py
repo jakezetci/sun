@@ -9,7 +9,7 @@ from coordinates import coordinates
 import math
 
 
-def B_dipole(r, B0=1000, R=696340, returnBl=True):
+def B_dipole(r, B0=1000, R=696340, returnBl=True, returnxyz=False):
     """
     r класса coordinates
     """
@@ -19,6 +19,12 @@ def B_dipole(r, B0=1000, R=696340, returnBl=True):
     if returnBl is True:
         return ((B_r * math.sin(r.theta) +
                 B_theta * math.cos(r.theta)) * math.cos(r.phi))
+    elif returnxyz is True:
+        return [B_r * math.sin(r.theta) * math.sin(r.phi) +
+                B_theta * math.cos(r.theta) * math.sin(r.phi),
+                B_r * math.cos(r.theta) + B_theta*math.sin(r.theta),
+                B_r * math.sin(r.theta) * math.cos(r.phi) +
+                B_theta * math.cos(r.theta) * math.cos(r.phi)]
     else:
         return [B_r, 0, B_theta]
 

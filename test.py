@@ -7,10 +7,10 @@ Created on Thu Jul 20 23:34:15 2023
 
 import numpy as np
 
-n = 15
-m = 30
-lats = np.linspace(-90, 90, num=n)
-lons = np.linspace(-180, 180, num=m)
+n = 61
+m = 61
+lats = np.linspace(-30, 30, num=n)
+lons = np.linspace(-30, 30, num=m)
 latitudes = np.repeat(lats, m)
 longitudes = np.tile(lons, n)
 L = np.asarray([latitudes, longitudes])
