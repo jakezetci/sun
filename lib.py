@@ -69,7 +69,12 @@ def distance_sphere(a, b, R):
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
     d = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
-    c = 2 * math.atan2(math.sqrt(d), math.sqrt(1 - d))
+    try:
+        c = 2 * math.atan2(math.sqrt(d), math.sqrt(1 - d))
+    except ValueError:
+        print(f'd={d}')
+        print(f'a, b = {a, b}')
+        raise ValueError
     km = R * c
     return km
 
@@ -87,12 +92,12 @@ def find_nearest(array, point, R=696340):
 
 
 def I1(r1, r2):
-    x, y, z = r1 - r2
-    return z/((x**2 + y**2)*np.linalg.norm(r1-r2))
+    x, y, z = r1 - r2  # разница векторов
+    return z/((x**2 + y**2)*(x**2 + y**2 + z**2)**(1/2))
 
 
 def I2(r1, r2):
-    x, y, z = r1 - r2
+    x, y, z = r1 - r2  # разница векторов
     num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
@@ -102,7 +107,7 @@ def I3(r1, r2):
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    num = -2 * (x**2+y**2)**2 * z2 + (x**2+y**2)*(z**3 + 3 * z2**2 * z) - 2 * z2*z**3
+    num = (-2*(x**2+y**2)**2*z2)+(x**2+y**2)*(z**3 + 3*z2**2*z) - 2*z2**2*z**3
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
 
@@ -114,7 +119,7 @@ def lI1(r1, r2):
 
 def lI2(r1, r2):
     x, y, z = r1 - r2
-    return 1/(3 * (x**2 + y**2)**2)
+    return 2/(3 * (x**2 + y**2)**2)
 
 
 def lI3(r1, r2):
@@ -125,14 +130,14 @@ def lI3(r1, r2):
 
 
 def GreenBl(r1, r2, a=696340):
-    r1, r2 = np.asarray([r1.x, r1.y, r1.z]), np.asarray([r2.x, r2.y, r2.z])
+    r1, r2 = r1.vector, r2.vector
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
     i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
     li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
-    G1 = 2*x1*(i1-li1) - 3 * x * ((x1**2 + y**2 - a**2)*(i2-li2)+(i3+li3))
-    G2 = 2*y1*(i1-li1) - 3 * y * ((x1**2 + y**2 - a**2)*(i2-li2)+(i3+li3))
+    G1 = 2*x1*(i1-li1) - 3*x*((x1**2 + y**2 - a**2)*(i2-li2)+(i3-li3))
+    G2 = 2*y1*(i1-li1) - 3*y*((x1**2 + y**2 - a**2)*(i2-li2)+(i3-li3))
     G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
     return np.array([G1, G2, G3])/(4*np.pi*a)
 
@@ -156,6 +161,7 @@ class grid:
             raise ValueError('longitudes size does not match latitudes')
         self.num = np.size(latitudes)
         self.values = np.zeros_like(latitudes)
+        self.valuesvector = np.zeros((self.num, 3))
         if uniformgrid is False:
             self.cells = []
             self.area = False
@@ -168,22 +174,31 @@ class grid:
 
         self.area = np.full_like(latitudes, ((hs * r * 2)**2))
         self.r = r
+        self.coors_set = [coordinates(self.r, *ll, latlon=True)
+                          for ll in self.latlon]
 
-
-    def set_value(self, value, lat, lon):
+    def set_value(self, value, lat, lon, vector=False):
         aa = np.asarray(self.latlon)
         bb = np.asarray(aa == [lat,lon])
         cc = list(bb)
         dd = [c[0] * c[1] for c in cc]
         i = np.argwhere(dd)[0]
-        self.values[i] = value
+        if vector:
+            self.valuesvector[i] = value
+        else:
+            self.values[i] = value
 
     def find_value(self, lat, lon):
         tt = list(map(list, self.latlon))
         coor, ind = find_nearest(self.latlon, (lat, lon), R=self.r)
         return self.values[ind]
+    
+    def find_value_easy(self, lat, lon):
+        ind = np.where(((np.array(self.latlon)
+                         == [lat, lon]).all(1)))
+        return self.values[ind]
 
-def B_comp(r, grid, B_map):
+def B_comp(r, grid, B_map, gridmatch=True):
     """
     r класса coordinates
     """
@@ -192,7 +207,10 @@ def B_comp(r, grid, B_map):
     for coor, S in zip(grid.latlon, grid.area):
         lat, lon = coor
         r_2 = coordinates(R, lat, lon, latlon=True)
-        B_l = B_map.find_value(lat, lon)
+        if gridmatch:
+            B_l = B_map.find_value_easy(lat, lon)
+        else:
+            B_l = B_map.find_value(lat, lon)
         add = B_l * np.asarray(GreenBl(r, r_2)) * S
         B = B + add
     return B

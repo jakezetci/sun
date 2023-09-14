@@ -6,6 +6,7 @@ Created on Tue Jul 25 16:07:08 2023
 """
 
 import math
+import numpy as np
 
 
 def ll2pt(lat, lon):
@@ -56,6 +57,10 @@ def xyz2pt(x, y, z):
     return r, phi, theta
 
 
+def xyz2truexyz(x, y, z):
+    return -x, z, y
+
+
 class coordinates:
     def __init__(self, r1, r2, r3, spherical=False, latlon=False):
         if spherical is True:
@@ -66,7 +71,16 @@ class coordinates:
             self.r, self.lat, self.lon = r1, r2, r3
             self.phi, self.theta = ll2pt(self.lat, self.lon)
             self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
-        else:   
+        else:
             self.x, self.y, self.z = r1, r2, r3
             self.r, self.phi, self.theta = xyz2pt(self.x, self.y, self.z)
             self.lat, self.lon = pt2ll(self.phi, self.theta)
+        self.xt, self.yt, self.zt = xyz2truexyz(self.x, self.y, self.z)
+        self.vector = np.asarray([self.x, self.y, self.z])
+
+    def project(self):
+        if math.cos(self.phi) == 1:
+            r = 0
+        else: 
+            r = math.sin(self.phi)/(1 - math.cos(self.phi))
+        return np.array([r * math.cos(self.theta), r * math.sin(self.theta)])

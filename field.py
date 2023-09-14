@@ -7,6 +7,7 @@ Created on Tue Jul 25 15:58:55 2023
 
 from coordinates import coordinates
 import math
+import numpy as np
 
 
 def B_dipole(r, B0=1000, R=696340, returnBl=True, returnxyz=False):
@@ -27,6 +28,24 @@ def B_dipole(r, B0=1000, R=696340, returnBl=True, returnxyz=False):
                 B_theta * math.cos(r.theta) * math.cos(r.phi)]
     else:
         return [B_r, 0, B_theta]
+
+
+def dipolebetter(r, m, returnBl=False, returnxyz=False, mu=1.25e-6):
+    """
+    r класса coordinates, m вектор (x, y, z) в системе садыкова
+    """
+
+    c = mu/(4 * math.pi * r.r**3)
+    m = np.asarray(m)
+    rm = np.dot(r.vector, m)
+
+    r_part = c * 3 * rm * r.vector
+    m_part = - c * m
+    L = np.asarray([0, 0, 1])
+    if returnBl is True:
+        return np.dot(r_part, L) + np.dot(m_part, L)
+    elif returnxyz is True:
+        return r_part + m_part
 
 
 if __name__ == "__main__":
