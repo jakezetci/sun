@@ -7,8 +7,8 @@ Created on Thu Jul 20 23:34:15 2023
 
 import numpy as np
 
-n = 31
-m = 31
+n = 16
+m = 16
 """
 lats = np.hstack((np.linspace(-30, -15, num=n),
                  np.linspace(15, 30, num=n)))
@@ -21,3 +21,5 @@ latitudes = np.repeat(lats, m)
 longitudes = np.tile(lons, n)
 L = np.asarray([latitudes, longitudes])
 np.savetxt("lat-lon.txt", L)
+
+

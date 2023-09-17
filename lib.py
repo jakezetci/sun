@@ -162,18 +162,19 @@ class grid:
         self.num = np.size(latitudes)
         self.values = np.zeros_like(latitudes)
         self.valuesvector = np.zeros((self.num, 3))
+        self.r = r
+        self.lat = latitudes
+        self.lon = longitudes
+        self.latlon = list(map(list, zip(latitudes, longitudes)))
         if uniformgrid is False:
             self.cells = []
             self.area = False
             for lat, lon, size in zip(latitudes, longitudes, hs):
                 center = coordinates(r, lat, lon, latlon=True)
                 self.cells.append(cell(center, size))
-        self.lat = latitudes
-        self.lon = longitudes
-        self.latlon = list(map(list, zip(latitudes, longitudes)))
+        else:
+            self.area = self.r**2 * np.abs(np.cos(np.radians(90-self.lat)) * hs)
 
-        self.area = np.full_like(latitudes, ((hs * r * 2)**2))
-        self.r = r
         self.coors_set = [coordinates(self.r, *ll, latlon=True)
                           for ll in self.latlon]
 
@@ -211,6 +212,7 @@ def B_comp(r, grid, B_map, gridmatch=True):
             B_l = B_map.find_value_easy(lat, lon)
         else:
             B_l = B_map.find_value(lat, lon)
+        g = GreenBl(r, r_2)
         add = B_l * np.asarray(GreenBl(r, r_2)) * S
         B = B + add
     return B
