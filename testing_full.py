@@ -13,10 +13,15 @@ import mplstereonet
 from coordinates import coordinates
 from lib import B_comp, grid
 from field import dipolebetter
-
+from plots import sphere
 
 latitudes, longitudes = np.loadtxt('lat-lon.txt')
-hs = np.pi / 90
+
+N = int(np.sqrt(latitudes.size))
+latlims = [latitudes.min(), longitudes.max()]
+lonlims = [longitudes.min(), longitudes.max()]
+
+hs = (np.pi / 180) * (lonlims[1] - lonlims[0]) / N
 r = 800000
 
 base_grid = grid(r, latitudes, longitudes, hs)
@@ -58,14 +63,11 @@ for i, (cs, val) in enumerate(zip(B_map_comp.coors_set,
                                   B_map_comp.valuesvector)):
     x, y = cs.project()
     u, v, z = val
-    if abs(u)>1e-4 or abs(v)>1e-4:
+    if abs(u) > 1e-4 or abs(v) > 1e-4:
         u, v = 0, 0
     xx[i], yy[i], uu[i], vv[i] = x, y, u, v
     cc[i] = math.sqrt(u**2 + v**2)
 
-fig, (ax1, ax2) = plt.subplots(1, 2)
-
-ax1.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
 
 n1 = B_map_high.num
 xx1 = np.empty(n1)
@@ -80,6 +82,65 @@ for i, (cs, val) in enumerate(zip(B_map_high.coors_set,
     xx1[i], yy1[i], uu1[i], vv1[i] = x, y, u, v
     cc1[i] = math.sqrt(u**2 + v**2)
 
-ax2.quiver(xx1, yy1, uu1, vv1, np.arctan2(vv1, uu1))
+fig2, (ax3, ax4) = plt.subplots(1, 2)
+ax3.set_title("расчёты...", fontsize=20, fontname='HSE Slab')
+ax4.set_title("модель", fontsize=20, fontname='HSE Slab')
 
+ax3.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
+
+ax4.quiver(xx1, yy1, uu1, vv1, np.arctan2(vv1, uu1))
+
+sphere(ax3, latlims, lonlims, n=N)
+sphere(ax4, latlims, lonlims, n=N)
+
+
+"""
+lats, lons = np.asarray(B_map_high.latlon).T
+
+lats = np.radians(90-lats)
+lons = np.radians(lons)
+fig = plt.figure()
+
+ax1 = fig.add_subplot(121,  projection='stereonet')
+ax2 = fig.add_subplot(122,  projection='stereonet')
+
+ax1.quiver(lats, lons, uu, vv, np.arctan2(vv, uu))
+ax1.grid()
+ax2.grid()
+
+ax2.quiver(lats, lons, uu1, vv1, np.arctan2(vv1, uu1))
+"""
+"""
+lats, lons = np.asarray(B_map_high.latlon).T
+
+lats = np.radians(90-lats)
+lons = np.radians(lons)
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='stereonet')
+ax.quiver(lats, lons, uu1, vv1, np.arctan2(uu1, vv1))
+ax.grid()
+
+
+lons = np.linspace(-30, 30, num=50)
+lats = np.full_like(lons, 30)
+
+phi = np.radians(lons)
+theta = np.radians(90-lats)
+
+xx = np.sin(theta) * np.cos(phi)/(1 - np.cos(theta))
+yy = np.sin(theta) * np.sin(phi)/(1 - np.cos(theta))
+
+ax2.plot(xx, yy, linewidth=0.6)
+
+lons = np.linspace(-30, 30, num=50)
+lats = np.full_like(lons, -30)
+
+phi = np.radians(lons)
+theta = np.radians(90-lats)
+
+xx = np.sin(theta) * np.cos(phi)/(1 - np.cos(theta))
+yy = np.sin(theta) * np.sin(phi)/(1 - np.cos(theta))
+
+ax2.plot(xx,yy, linewidth=0.6)
+"""
 plt.show()

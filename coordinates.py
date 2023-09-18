@@ -79,8 +79,8 @@ class coordinates:
         self.vector = np.asarray([self.x, self.y, self.z])
 
     def project(self):
-        if math.cos(self.phi) == 1:
+        if math.cos(self.theta) == 1:
             r = 0
         else: 
-            r = math.sin(self.phi)/(1 - math.cos(self.phi))
-        return np.array([r * math.cos(self.theta), r * math.sin(self.theta)])
+            r = math.sin(self.theta)/(1 - math.cos(self.theta))
+        return np.array([r * math.cos(self.phi), r * math.sin(self.phi)])
