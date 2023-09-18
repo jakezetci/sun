@@ -81,6 +81,6 @@ class coordinates:
     def project(self):
         if math.cos(self.theta) == 1:
             r = 0
-        else: 
+        else:
             r = math.sin(self.theta)/(1 - math.cos(self.theta))
         return np.array([r * math.cos(self.phi), r * math.sin(self.phi)])
