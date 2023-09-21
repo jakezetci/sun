@@ -13,40 +13,45 @@ from lib import B_comp, grid
 from field import B_dipole
 import numpy as np
 import math
+from plots import sphere, disk
 
-latitudes , longitudes = np.loadtxt('lat-lon.txt')
-hs = 90/15
-r = 696340
-base_grid = grid(r, latitudes, longitudes, hs)
 
-B_map = grid(r, latitudes, longitudes, hs)
+def plotmap(B_map, mode=disk):
+    """
+    Args:
+        B_map (grid): a grid with either values of valuesvector.
 
-for latlon in B_map.latlon:
-    r1 = coordinates(696340, latlon[0], latlon[1])
-    B_map.set_value(B_dipole(r1, returnBl=True),
-                    latlon[0], latlon[1])
-
-r_high = 800000
-
-B_map_high = grid(r_high, latitudes, longitudes, hs)
-B_map_comp = grid(r_high, latitudes, longitudes, hs)
-
-for latlon in B_map_high.latlon:
-    r1 = coordinates(r_high, latlon[0], latlon[1], latlon=True)
-    B_c = np.asarray(B_comp(r1, base_grid, B_map))
-    B_map_comp.set_value(B_c, latlon[0], latlon[1], vector=True)
-
-n = B_map_comp.num
-xx = np.empty(n)
-yy = np.empty(n)
-uu = np.empty(n)
-vv = np.empty(n)
-cc = np.empty(n)
-for i, (cs, val) in enumerate(zip(B_map_comp.coors_set, B_map_comp.valuesvector)):
-    x, y = cs.project()
-    u, z, v = val
-    xx[i], yy[i], uu[i], vv[i] = x, y, u, v
-    cc = math.sqrt(u**2 + v**2)
-
-plt.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
-plt.show()
+    Returns:
+        A plt.figure.
+    """
+    N = int(np.sqrt(B_map.lon.size))
+    latlims = [B_map.lat.min(), B_map.lat.max()]
+    lonlims = [B_map.lon.min(), B_map.lon.max()]
+    fig, ax = plt.subplots(1, 1)
+    n = B_map.num
+    if np.linalg.norm(B_map.valuesvector[0]) == 0:
+        n = B_map.num
+        xx = np.empty(n)
+        yy = np.empty(n)
+        sq = np.empty(n)
+        for i, (cs, val) in enumerate(zip(B_map.coors_set,
+                                          B_map.values)):
+            x, y = cs.x, cs.y
+            s = val
+            xx[i], yy[i], sq[i] = x, y, s
+        ax.plot(xx, yy, c=s)
+    else:
+        xx = np.empty(n)
+        yy = np.empty(n)
+        uu = np.empty(n)
+        vv = np.empty(n)
+        cc = np.empty(n)
+        for i, (cs, val) in enumerate(zip(B_map.coors_set,
+                                          B_map.valuesvector)):
+            x, y = cs.x, cs.y
+            u, v, z = val
+            xx[i], yy[i], uu[i], vv[i] = x, y, u, v
+            cc[i] = math.sqrt(u**2 + v**2)
+        ax.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
+    mode(ax, latlims, lonlims, n=N, r=B_map.r)
+    plt.show()

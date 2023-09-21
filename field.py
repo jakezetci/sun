@@ -30,11 +30,12 @@ def B_dipole(r, B0=1000, R=696340, returnBl=True, returnxyz=False):
         return [B_r, 0, B_theta]
 
 
-def dipolebetter(r, m, returnBl=False, returnxyz=False, mu=1.25e-6):
+def dipolebetter(r, m, rdipole=np.array([0, 0, 0]), returnBl=False,
+                 returnxyz=False, mu=1.25e-6):
     """
     r класса coordinates, m вектор (x, y, z) в системе садыкова
     """
-
+    r = coordinates(*(r.vector-rdipole))
     c = mu/(4 * math.pi * r.r**3)
     m = np.asarray(m)
     rm = np.dot(r.vector, m)
@@ -46,6 +47,8 @@ def dipolebetter(r, m, returnBl=False, returnxyz=False, mu=1.25e-6):
         return np.dot(r_part, L) + np.dot(m_part, L)
     elif returnxyz is True:
         return r_part + m_part
+    else:
+        raise ValueError
 
 
 if __name__ == "__main__":

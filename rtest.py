@@ -5,22 +5,43 @@ Created on Fri Sep  8 15:16:44 2023
 @author: cosbo
 """
 
+"""
+import cartopy.crs as ccrs
+ax =plt.axes(projection=ccrs.Orthographic())
+plt.pcolormesh(lons, lats,val, edgecolors='k', 
+               linewidths=1, transform=ccrs.PlateCarree())
+
+ax.coastlines()
+ax.gridlines()
+
+plt.show() """
+
+
+
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 import math
-
-
-a = np.asarray([1, 2, 3])
-b = np.asarray([1, 4, 6])
-x, y, z = b - a
+from coordinates import coordinates
+from lib import B_comp, grid, ll2xyz
+from field import dipolebetter
+from plots import sphere
+from plotting import plotmap
+from computing import model_grid
+from plots import disk
 
 try:
-    print(math.sqrt(-1))
-except ValueError:
-    print("fafa")
+    import cPickle as pickle
+except ModuleNotFoundError:
+    import pickle
 
 
-latitudes , longitudes = np.loadtxt('lat-lon.txt')
-latlon = list(map(list, zip(latitudes, longitudes)))
-latlon = np.array(latlon)
-rows = np.where(((latlon == [-90, -180]).all(1)))
-print(latlon[rows])
+
+m = np.asarray(ll2xyz(1, 60, 30)) * 1e8
+pos = coordinates(500000, 60, 30, latlon=True)
+
+
+with open('test.pkl.pkl', 'rb') as f:
+    maps = pickle.load(f)
+    
+plotmap(maps, mode=disk)

@@ -84,3 +84,7 @@ class coordinates:
         else:
             r = math.sin(self.theta)/(1 - math.cos(self.theta))
         return np.array([r * math.cos(self.phi), r * math.sin(self.phi)])
+
+
+if __name__ == "__main__":
+    pass

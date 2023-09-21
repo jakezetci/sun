@@ -88,8 +88,9 @@ def subplots(nrows=1, ncols=1, xlimit=None, ylimit=None, xlabel=("xlabel"),
         ax.set_ylim(yl)
     return fig, axes
 
+
 def sphere(ax, latlim=(-90, 90), lonlim=(-180, 180), n=5,
-           color='grey', lw=0.2):
+           r=696340, color='grey', lw=0.2):
     """
     Generates a latitude - longitude grid on a subplot
 
@@ -116,5 +117,34 @@ def sphere(ax, latlim=(-90, 90), lonlim=(-180, 180), n=5,
 
         xx = np.sin(theta) * np.cos(phi)/(1 - np.cos(theta))
         yy = np.sin(theta) * np.sin(phi)/(1 - np.cos(theta))
+
+        ax.plot(xx, yy, linewidth=lw, color=color)
+
+
+def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
+         r=696340, color='grey', lw=0.2):
+    lat_set = np.linspace(latlim[0], latlim[1], n)
+    lon_set = np.linspace(lonlim[0], lonlim[1], n)
+    lat_big = np.radians(90 - np.linspace(latlim[0], latlim[1]))
+    lon_big = np.radians(np.linspace(lonlim[0], lonlim[1]))
+    for one in lat_set:
+        lats = np.full_like(lon_big, np.radians(90-one))
+
+        phi = lon_big
+        theta = lats
+
+        xx = r * np.sin(theta) * np.cos(phi)
+        yy = r * np.cos(theta)
+
+        ax.plot(xx, yy, linewidth=0.2, color=color)
+
+    for one in lon_set:
+        lons = np.full_like(lat_big, np.radians(one))
+
+        phi = lons
+        theta = lat_big
+
+        xx = r * np.sin(theta) * np.cos(phi)
+        yy = r * np.cos(theta)
 
         ax.plot(xx, yy, linewidth=lw, color=color)
