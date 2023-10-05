@@ -7,16 +7,12 @@ Created on Mon Sep 18 00:26:45 2023
 
 import numpy as np
 
+a = [
+    5.023568322330189403e+03,
+    4.214826789767073933e+03,
+    9.051050494072493166e+03]
 
-def a(y, u):
-    print(y, u)
+l = [0,0,1]
 
-def b(x,y,z):
-    print(x,y,z)
-
-def what(func, *args):
-    func(*args)
-
-
-
-what(b, 8, 9, 10)
+print(np.dot(a,l))
+print(2**2 + 3**2 * 2)

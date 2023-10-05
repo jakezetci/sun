@@ -133,7 +133,7 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
         phi = lon_big
         theta = lats
 
-        xx = r * np.sin(theta) * np.cos(phi)
+        xx = r * np.sin(theta) * np.sin(phi)
         yy = r * np.cos(theta)
 
         ax.plot(xx, yy, linewidth=0.2, color=color)
@@ -144,7 +144,7 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
         phi = lons
         theta = lat_big
 
-        xx = r * np.sin(theta) * np.cos(phi)
+        xx = r * np.sin(theta) * np.sin(phi)
         yy = r * np.cos(theta)
 
         ax.plot(xx, yy, linewidth=lw, color=color)

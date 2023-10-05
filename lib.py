@@ -8,7 +8,8 @@ import numpy as np
 import math
 import pandas as pd
 from dataclasses import dataclass
-
+import time
+from coordinates import coordinates
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
@@ -16,8 +17,8 @@ except ModuleNotFoundError:
 
 
 def B_dipole(r, B0=1000, R=696340, returnBl=True, returnxyz=False):
-    """
-    r класса coordinates
+    """    r класса coordinates
+
     """
     B_r = -2 * B0 * (R/r.r)**3 * math.cos(r.theta)
     B_theta = -B0 * (R/r.r)**3 * math.sin(r.theta)
@@ -41,7 +42,7 @@ def dipolebetter(r, m, rdipole=[0, 0, 0], returnBl=False,
     r класса coordinates, m вектор (x, y, z) в системе садыкова
     """
 
-    c = mu/(4 * math.pi * r.r**3)
+    c = mu/(4 * math.pi * np.linalg.norm(r.vector)**3)
     m = np.asarray(m)
     rm = np.dot(r.vector, m)
 
@@ -54,81 +55,6 @@ def dipolebetter(r, m, rdipole=[0, 0, 0], returnBl=False,
         return r_part + m_part
 
 
-def ll2pt(lat, lon):
-    """
-    Latitude, longitude -> spherical phi, theta
-
-    """
-    if lon >= 0:
-        return math.radians(lon), math.radians(90-lat)
-    else:
-        return math.radians(360+lon), math.radians(90-lat)
-
-
-def pt2ll(phi, theta):
-    """
-    Spherical phi, theta -> latitude, longitude
-
-    """
-    if phi <= math.pi:
-        return math.degrees(math.pi/2 - theta), math.degrees(phi)
-    else:
-        return math.degrees(math.pi/2 - theta), math.degrees(phi - 2*math.pi)
-
-
-def xyz2ll(x, y, z):
-    r = math.sqrt(x**2 + y**2 + z**2)
-    theta = math.acos(z/r)
-    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
-    return r, pt2ll(phi, theta)
-
-
-def pt2xyz(phi, theta, r=696340):
-    x = r * math.sin(theta) * math.cos(phi)
-    y = r * math.cos(theta)
-    z = r * math.sin(theta) * math.cos(phi)
-    return x, y, z
-
-
-def ll2xyz(lat, lon, r=696340):
-    phi, theta = ll2pt(lat, lon)
-    return pt2xyz(phi, theta, r)
-
-
-def xyz2pt(x, y, z):
-    r = math.sqrt(x**2 + y**2 + z**2)
-    theta = math.acos(z/r)
-    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
-    return r, phi, theta
-
-
-def xyz2truexyz(x, y, z):
-    return -x, z, y
-
-
-class coordinates:
-    def __init__(self, r1, r2, r3, spherical=False, latlon=False):
-        if spherical is True:
-            self.r, self.phi, self.theta = r1, r2, r3
-            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
-            self.lat, self.lon = pt2ll(self.phi, self.theta)
-        elif latlon is True:
-            self.r, self.lat, self.lon = r1, r2, r3
-            self.phi, self.theta = ll2pt(self.lat, self.lon)
-            self.x, self.y, self.z = pt2xyz(self.phi, self.theta, self.r)
-        else:
-            self.x, self.y, self.z = r1, r2, r3
-            self.r, self.phi, self.theta = xyz2pt(self.x, self.y, self.z)
-            self.lat, self.lon = pt2ll(self.phi, self.theta)
-        self.xt, self.yt, self.zt = xyz2truexyz(self.x, self.y, self.z)
-        self.vector = np.asarray([self.x, self.y, self.z])
-
-    def project(self):
-        if math.cos(self.theta) == 1:
-            r = 0
-        else:
-            r = math.sin(self.theta)/(1 - math.cos(self.theta))
-        return np.array([r * math.cos(self.phi), r * math.sin(self.phi)])
 
 
 def distance_sphere(a, b, R):
@@ -166,13 +92,14 @@ def find_nearest(array, point, R=696340):
 
 def I1(r1, r2):
     x, y, z = r1 - r2  # разница векторов
-    return z/((x**2 + y**2)*(x**2 + y**2 + z**2)**(1/2))
+    return z/((x**2 + y**2)*np.linalg.norm(r1-r2))
 
 
 def I2(r1, r2):
     x, y, z = r1 - r2  # разница векторов
     num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
+    a =num/den
     return num/den
 
 
@@ -180,7 +107,7 @@ def I3(r1, r2):
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    num = (-2*(x**2+y**2)**2*z2)+(x**2+y**2)*(z**3 + 3*z2**2*z) - 2*z2**2*z**3
+    num = (-2*((x**2+y**2)**2) * z2)+((x**2+y**2)*(z**3 + 3*(z2**2)*z)) - 2*(z2**2)*(-z)**3
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
 
@@ -199,19 +126,57 @@ def lI3(r1, r2):
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    return (x**2 + y**2 + 2 * z2**2)/(3 * (x**2 + y**2)**2)
+    return (x**2 + y**2 + 2*(z2**2))/(3 * (x**2 + y**2)**2)
 
 
-def GreenBl(r1, r2, a=696340):
+def IlI1(r1, r2):
+    num = -1
+    R = np.asarray(r1 - r2)
+    r = np.linalg.norm(R)
+    L = np.array([0, 0, 1])
+    den = (r + np.dot(L, R))*r
+    return num / den
+
+
+def IlI2(r1, r2):
+    R = np.asarray(r1 - r2)
+    r = np.linalg.norm(R)
+    L = np.array([0, 0, 1])
+    d1 = -2/((3*r*(r-np.dot(L,R)) * (r+np.dot(L,R))**2))
+    d2 = np.dot(L, R) / (3*(r**2 - np.dot(L, R)**2)*r**3)
+    return d1+d2
+
+
+def IlI3(r1, r2):
+    R = np.asarray(r1 - r2)
+    r = np.linalg.norm(R)
+    L = np.array([0, 0, 1])
+    d1 = -(np.dot(L,R)**2 + np.dot(L,R)*r + r**2)/(3*(r+np.dot(L,R)) * r**3)
+    d2 = -2*np.dot(L,r2)/(3*r**3)
+    d3n = -(np.dot(L,r2)**2 * (2*r**3 - 3*np.dot(L,R)*r**2 + np.dot(L,R)**3))
+    d3d = 3*r**3 * (r**2 - np.dot(L,R)**2)**2
+    d3 = d3n/d3d
+    return d1+d2+d3
+
+
+def GreenBl(r1, r2, a=696340, method=False):
     r1, r2 = r1.vector, r2.vector
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
-    li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
-    G1 = 2*x1*(i1-li1) - 3*x*((x1**2 + y**2 - a**2)*(i2-li2)+(i3-li3))
-    G2 = 2*y1*(i1-li1) - 3*y*((x1**2 + y**2 - a**2)*(i2-li2)+(i3-li3))
-    G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
+    if method is True:
+        ili1 = IlI1(r1, r2)
+        ili2 = IlI2(r1, r2)
+        ili3 = IlI3(r1, r2)
+        G1 = 2 * x1 * ili1 - 3*x*((x1**2 + y1**2 - a**2)*ili2+ili3)
+        G2 = 2 * y1 * ili1 - 3*y*((x1**2 + y1**2 - a**2)*ili2+ili3)
+        G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
+    else:
+        i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
+        li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
+        G1 = 2*x1*(i1-li1) - 3*x*((x1**2 + y1**2 - a**2)*(i2-li2)+(i3-li3))
+        G2 = 2*y1*(i1-li1) - 3*y*((x1**2 + y1**2 - a**2)*(i2-li2)+(i3-li3))
+        G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
     return np.array([G1, G2, G3])/(4*np.pi*a)
 
 
@@ -226,6 +191,16 @@ class cell:
     def set_value(self, value):
         self.value = value
 
+class B_class:
+    def __init__(self, B, progress):
+        self.B = B
+        self.progress = progress
+
+    def prog(self):
+        self.progress = self.progress + 1
+
+    def B(self, B_new):
+        self.B = B_new
 
 @dataclass
 class grid:
@@ -246,9 +221,9 @@ class grid:
             for lat, lon, size in zip(latitudes, longitudes, hs):
                 center = coordinates(r, lat, lon, latlon=True)
                 self.cells.append(cell(center, size))
-
         elif hs is not False:
-            self.area = self.r**2 * np.abs(np.cos(np.radians(90-self.lat))
+            self.area = self.r**2 * np.abs((np.cos(np.radians(90-self.lat)+hs/2) -
+                                           np.cos(np.radians(90-self.lat)-hs/2))
                                            * hs)
         elif area is not False:
             self.area = area
@@ -327,49 +302,83 @@ class grid:
         self.progress = int(max([np.count_nonzero(self.values),
                              np.count_nonzero(self.valuesvector)/3]))
 
+    def add_fieldinfo(self, m, dipolepos):
+        self.m = m
+        self.dipolepos = dipolepos
 
-def B_comp_diff_maps(r, grid, B_map):
-    """
-    r класса coordinates
-    """
-    B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
-    R = grid.r
-    for coor, S in zip(grid.latlon, grid.area):
-        lat, lon = coor
-        r_2 = coordinates(R, lat, lon, latlon=True)
-        B_l = B_map.find_value(lat, lon)
+    def change_coors(self):
+        self.coors_set = [coordinates(self.r, *ll, latlon=True)
+                          for ll in self.latlon]
 
-        add = B_l * np.asarray(GreenBl(r, r_2)) * S
-        B = B + add
-    return B
+def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=True):
 
+    def B_comp_same_maps(r, B_map, heavy=True, change=True):
+        """
+        быстрое вычисление B в случае, когда
+        сетка с числам совпадает с сеткой интегрирования
+        Args:
+            r (coordinates): DESCRIPTION.
+            B_map (grid): DESCRIPTION.
 
-def B_comp_same_maps(r, B_map):
-    """
-    быстрое вычисление B в случае, когда
-    сетка с числам совпадает с сеткой интегрирования
-    Args:
-        r (coordinates): DESCRIPTION.
-        B_map (grid): DESCRIPTION.
+        Returns:
+            B_comp(np.array, 3d)
 
-    Returns:
-        B_comp(np.array, 3d)
+        """
+        B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
+        R = B_map.r
+        n = B_map.num
+        debugging_obj = []
+        if heavy:
+            for i in range(n):
 
-    """
-    B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
-    R = B_map.r
-    for coor, S in zip(B_map.latlon, B_map.area):
-        lat, lon = coor
-        r_2 = coordinates(R, lat, lon, latlon=True)
-        B_l = B_map.find_value_easy(lat, lon)
-        add = B_l * np.asarray(GreenBl(r, r_2)) * S
-        B = B + add
-    return B
+                lat, lon = B_map.latlon[i]
+                r_2 = coordinates(R, lat, lon, latlon=True)
+                B_l = B_map.find_value(lat, lon, index=i)
+                add = B_l * np.asarray(GreenBl(r, r_2, method=change)) * B_map.area[i]
+                B = B + add
+                if debug:
+                    debugging_obj.append(add)
+                    if  6 < lat < 12 and 10 < lon < 14:
+                        gr = GreenBl(r, r_2)
+                        r1, r_2 = r.vector, r_2.vector
+                        i1, i2, i3 = I1(r1, r_2), I2(r1, r_2), I3(r1, r_2)
+                        li1, li2, li3 = lI1(r1, r_2), lI2(r1, r_2), lI3(r1, r_2)
+                        a1, a2, a3 = i1 - li1, i2 - li2, i3 -li3
+                        g = gr
+                        aili1 = IlI1(r1, r_2)
+                        aili2 = IlI2(r1, r_2)
+                        aili3 = IlI3(r1, r_2)
+                        gg = 0
 
+        else:
+            for coor, S in zip(B_map.latlon, B_map.area):
+                lat, lon = coor
+                r_2 = coordinates(R, lat, lon, latlon=True)
+                B_l = B_map.find_value_easy(lat, lon)
+                add = B_l * np.asarray(GreenBl(r, r_2)) * S
+                B = B + add
+        if debug:
+            return B, debugging_obj
+        else:
+            return B
 
-def B_comp(r, B_map, method='allmap', grid=False):
+    def B_comp_diff_maps(r, grid, B_map):
+        """
+        r класса coordinates
+        """
+        B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
+        R = grid.r
+        for coor, S in zip(grid.latlon, grid.area):
+            lat, lon = coor
+            r_2 = coordinates(R, lat, lon, latlon=True)
+            B_l = B_map.find_value(lat, lon)
+
+            add = B_l * np.asarray(GreenBl(r, r_2)) * S
+            B = B + add
+        return B
+
     if method == 'allmap':
-        return B_comp_same_maps(r, B_map)
+        return B_comp_same_maps(r, B_map, change=change)
     elif method == 'diffmaps':
         return B_comp_diff_maps(r, grid, B_map)
 
@@ -380,15 +389,32 @@ class magneticline:
         self.initial_value = initial_value
         self.points = [initial_point]
         self.values = [initial_value]
+        self.pointsxyz = [initial_point.vector]
         self.step = step
+        self.progress = 0
+
 
     def add_value(self, func, *args):
         vec = np.asarray(self.values[-1])
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector)
 
-        self.values.append(func(new_point, *args))
+        self.values.append(func(coordinates(*new_point), returnxyz=True, *args))
         self.points.append(coordinates(*new_point))
+        self.pointsxyz.append(new_point)
+        self.progress = self.progress + 1
+
+    def add_value_comp(self, B_map):
+        vec = np.asarray(self.values[-1])
+        new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
+            self.points[-1].vector)
+        
+        val = B_comp(coordinates(*new_point), B_map)
+        self.values.append(val)
+        self.points.append(coordinates(*new_point))
+        self.pointsxyz.append(new_point)
+        self.progress = self.progress + 1
+
 
     def line_by_length(self, func, length, *args):
         for i in range(length//self.step):
@@ -414,6 +440,9 @@ class magneticline:
     def save_csv(self, name=False):
         df = self.dataframe(self)
         df.to_csv(f'{name}.csv')
+
+    def brute_progress(self):
+        self.progress = len(self.points)
 
 
 def load_grid(df):

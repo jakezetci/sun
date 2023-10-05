@@ -38,14 +38,14 @@ def xyz2ll(x, y, z):
     return r, pt2ll(phi, theta)
 
 
-def pt2xyz(phi, theta, r=696340):
-    x = r * math.sin(theta) * math.cos(phi)
+def pt2xyz(phi, theta, r):
+    x = r * math.sin(theta) * math.sin(phi)
     y = r * math.cos(theta)
     z = r * math.sin(theta) * math.cos(phi)
     return x, y, z
 
 
-def ll2xyz(lat, lon, r=696340):
+def ll2xyz(lat, lon, r):
     phi, theta = ll2pt(lat, lon)
     return pt2xyz(phi, theta, r)
 

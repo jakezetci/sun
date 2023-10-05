@@ -41,7 +41,6 @@ m = np.asarray(ll2xyz(1, 60, 30)) * 1e8
 pos = coordinates(500000, 60, 30, latlon=True)
 
 
-with open('test.pkl.pkl', 'rb') as f:
-    maps = pickle.load(f)
-    
-plotmap(maps, mode=disk)
+
+with open('checkpoint1 testBIG.pkl', 'rb') as f:
+    map1 = pickle.load(f)
