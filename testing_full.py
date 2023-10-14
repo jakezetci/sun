@@ -11,7 +11,7 @@ import matplotlib as mpl
 import math
 import mplstereonet
 from coordinates import coordinates
-from lib import B_comp, grid
+from lib import B_comp, Grid
 from field import dipolebetter
 from plots import sphere
 
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     hs = (np.pi / 180) * (lonlims[1] - lonlims[0]) / N
     r = 800000
 
-    base_grid = grid(r, latitudes, longitudes, hs)
-    B_map = grid(r, latitudes, longitudes, hs)
+    base_grid = Grid(r, latitudes, longitudes, hs)
+    B_map = Grid(r, latitudes, longitudes, hs)
     m = np.asarray([0, 0, 10e6])
 
     for (lat, lon) in B_map.latlon:
@@ -36,11 +36,11 @@ if __name__ == "__main__":
         B_map.set_value(dipolebetter(r1, m, returnBl=True), lat, lon)
 
     r_high = 900000
-    high_grid = grid(r_high, latitudes, longitudes, hs)
-    B_map_high = grid(r_high, latitudes, longitudes, hs)
-    B_map_comp = grid(r_high, latitudes, longitudes, hs)
+    high_grid = Grid(r_high, latitudes, longitudes, hs)
+    B_map_high = Grid(r_high, latitudes, longitudes, hs)
+    B_map_comp = Grid(r_high, latitudes, longitudes, hs)
 
-    base_grid = grid(r, latitudes, longitudes, hs)
+    base_grid = Grid(r, latitudes, longitudes, hs)
 
     for (lat, lon) in B_map_high.latlon:
         r1 = coordinates(r_high, lat, lon, latlon=True)

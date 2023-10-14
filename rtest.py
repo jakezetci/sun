@@ -23,12 +23,12 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates
-from lib import B_comp, grid, ll2xyz
+from lib import B_comp, Grid, ll2xyz
 from field import dipolebetter
 from plots import sphere
-from plotting import plotmap
+
 from computing import model_grid
-from plots import disk
+from plots import disk, plotmap
 
 try:
     import cPickle as pickle
@@ -37,7 +37,7 @@ except ModuleNotFoundError:
 
 
 
-m = np.asarray(ll2xyz(1, 60, 30)) * 1e8
+m = np.asarray(ll2xyz(60, 30, 1)) * 1e8
 pos = coordinates(500000, 60, 30, latlon=True)
 
 

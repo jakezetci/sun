@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates, ll2xyz
-from lib import B_comp, grid
+from lib import B_comp, Grid
 from field import dipolebetter
 from plots import sphere
 from plotting import plotmap
@@ -32,16 +32,16 @@ def create_grid(latlim, lonlim, N):
     latitudes, longitudes = L
     r = 696340
     hs = (np.pi / 180) * (lonlim[1] - lonlim[0]) / m
-    B_mapempty = grid(r, latitudes, longitudes, hs)
+    B_mapempty = Grid(r, latitudes, longitudes, hs)
     return B_mapempty
 
-m = np.asarray(ll2xyz(1, 10, 10)) * 1e12
-pos = coordinates(600000, 10, 10, latlon=True)
+m = np.asarray(ll2xyz(12, 12, 1)) * 1e12
+pos = coordinates(640000, 12, 12, latlon=True)
 pos = pos.vector
 
 
-latlims = [-30, 30]
-lonlims = [-20, 14]
+latlims = [-10, 40]
+lonlims = [-10, 40]
 N = 5
 empty = create_grid(latlims, lonlims, N)
 
@@ -50,7 +50,7 @@ mapL = model_grid(empty, dipole=m, dipolepos=pos,
 
 
 
-r = coordinates(696340+11000, 5, -12, latlon=True)
+r = coordinates(696340+11000, 10, 10, latlon=True)
 B, debug = B_comp(r, mapL, debug=True, change=False)
 B2 = B_comp(r, mapL, debug=False, change=True)
 
@@ -87,9 +87,13 @@ plt.figure()
 plt.plot(mapL.lon, debug[:, 1], 'o', ms=0.2)
 plt.plot(xxdot2, yy)    
 plt.title('lons')
+
+"""
 plt.figure()
 plt.plot(mapL.lat, mapL.values, 'o', ms=0.2)
 plt.title('lats')
 plt.figure()
 plt.plot(mapL.lon, mapL.values, 'o', ms=0.2)
 plt.title('lons')
+
+"""

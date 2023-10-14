@@ -11,9 +11,9 @@ import matplotlib as mpl
 import math
 import mplstereonet
 from coordinates import coordinates
-from lib import B_comp, grid
+from lib import B_comp, Grid, create_grid
 from field import dipolebetter
-from plots import sphere
+from plots import sphere, disk, plotmap
 import os
 import time
 
@@ -52,13 +52,16 @@ def model_grid(B_map, dipole, dipolepos, vector=False, name=False,
         None.
 
     """
-
+    if vector is True:
+        folder = 'vectormaps'
+    else:
+        folder = 'Lmaps'
     if name is False:
         name = crtname(name)
 
     checkpointsnum = int(checkpoints)
-    B_map.save_pkl(name=f'checkpoint2 {name}')
-    B_map.save_pkl(name=f'checkpoint1 {name}')
+    B_map.save_pkl(name=f'checkpoint2 {name}', empty=False, vector=vector)
+    B_map.save_pkl(name=f'checkpoint1 {name}', empty=False, vector=vector)
     r = B_map.r
     for i in range(B_map.progress, B_map.num):
         lat, lon = B_map.latlon[i]
@@ -68,53 +71,72 @@ def model_grid(B_map, dipole, dipolepos, vector=False, name=False,
                         lat, lon, index=i, vector=vector)
         B_map.progress1()
         if i % checkpointsnum == 0:
-            os.remove(f'checkpoint1 {name}.pkl')
-            os.replace(f'checkpoint2 {name}.pkl', f'checkpoint1 {name}.pkl')
+            os.remove(f'{folder}/checkpoint1 {name}.pkl')
+            os.replace(f'{folder}/checkpoint2 {name}.pkl', f'{folder}/checkpoint1 {name}.pkl')
             B_map.save_pkl(name=f'checkpoint2 {name}')
     B_map.save_pkl(name=name)
     if returnobj:
         return B_map
 
 
-def comp_grid(Grid, B_map, vector=False, name=False,
+def comp_grid(grid, B_map, vector=False, name=False,
               returnobj=False, checkpoints=721, timestamp=False, debug=False):
-
+    if vector is True:
+        folder = 'vectormaps'
+    else:
+        folder = 'Lmaps'
     if name is False:
         name = crtname(name)
     checkpointsnum = int(checkpoints)
-    Grid.save_pkl(name=f'checkpoint2 {name}')
-    Grid.save_pkl(name=f'checkpoint1 {name}')
-    R = Grid.r
+    grid.save_pkl(name=f'checkpoint2 {name}')
+    grid.save_pkl(name=f'checkpoint1 {name}')
+    R = grid.r
+    tic = time.perf_counter()
     for i in range(Grid.progress, Grid.num):
-        tic = time.perf_counter()
+        
         lat, lon = Grid.latlon[i]
         r1 = coordinates(R, lat, lon, latlon=True)
         value = B_comp(r1, B_map, debug=debug)
-        Grid.set_value(value, lat, lon, index=i, vector=vector)
-        Grid.progress1()
+        grid.set_value(value, lat, lon, index=i, vector=vector)
+        grid.progress1()
         if i % checkpointsnum == 0:
-            os.remove(f'checkpoint1 {name}.pkl')
-            os.replace(f'checkpoint2 {name}.pkl', f'checkpoint1 {name}.pkl')
-            Grid.save_pkl(name=f'checkpoint2 {name}')
+            os.remove(f'{folder}/checkpoint1 {name}.pkl')
+            os.replace(f'{folder}/checkpoint2 {name}.pkl', f'{folder}/checkpoint1 {name}.pkl')
+            grid.save_pkl(name=f'checkpoint2 {name}')
         if timestamp:
             toc = time.perf_counter()
-            print(f'value {i} done in {toc - tic:0.2f} seconds')
-    Grid.save_pkl(name=name)
+            print(f'values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds')
+            tic = time.perf_counter()
+    grid.save_pkl(name=name)
     if returnobj:
-        return Grid
+        return grid
 
 
 def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
-                       maxsteps=200):
+                       maxsteps=200, timestamp=False):
 
     if name is False:
         name = crtname(name)
 
     magline.save_pkl(name=f'checkpoint {name}')
+    start = magline.progress
+    tic = time.perf_counter()
+    if timestamp is not False:
+        for i in range(start, maxsteps):
+            magline.add_value(dipolebetter, dipole, dipolepos)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+            else:
+                magline.save_pkl(name=f'checkpoint1 {name}')
+    else:
+        for i in range(start, maxsteps):
+            tic = time.perf_counter()
+            magline.add_value(dipolebetter, dipole, dipolepos)
+            magline.save_pkl(name=f'checkpoint1 {name}')
 
-    for i in range(maxsteps):
-        magline.add_value(dipolebetter, dipole, dipolepos)
-        magline.save_pkl(name=f'checkpoint1 {name}')
     magline.save_pkl(name)
     if returnobj:
         return magline
@@ -128,16 +150,34 @@ def comp_magneticline(magline, B_map, name=False, returnobj=False,
 
     magline.save_pkl(name=f'checkpoint {name}')
     start = magline.progress
-    for i in range(start, maxsteps):
-        tic = time.perf_counter()
-        magline.add_value_comp(B_map)
-        magline.save_pkl(name=f'checkpoint1 {name}')
-        if timestamp:
-            toc = time.perf_counter()
-            print(f'value {i} done in {toc - tic:0.2f} seconds')
+    tic = time.perf_counter()
+    if timestamp is not False:
+        for i in range(start, maxsteps):
+
+            magline.add_value_comp(B_map)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+            else:
+                magline.save_pkl(name=f'checkpoint1 {name}')
+    else:
+        for i in range(start, maxsteps):
+            tic = time.perf_counter()
+            magline.add_value_comp(B_map)
+            magline.save_pkl(name=f'checkpoint1 {name}')
     magline.save_pkl(name)
     if returnobj:
         return magline
+
+
+def create_model_plotmap(latlim, lonlim, N, M, dipolepos, vector=False,
+                          name=False, n=10, alpha=0.7, lw=0.8):
+    grid = create_grid(latlim, lonlim, N)
+    computed = model_grid(grid, M, dipolepos, name=name, returnobj=True,
+                          vector=vector)
+    return plotmap(computed, lines=n, alpha=alpha, lw=lw)
 
 
 if __name__ == "__main__":

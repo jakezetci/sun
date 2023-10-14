@@ -61,6 +61,12 @@ def xyz2truexyz(x, y, z):
     return -x, z, y
 
 
+def xy2ll(x, y, r=696340):
+    theta = math.acos(y/r)
+    phi = math.asin(x/(r*math.sin(theta)))
+    return pt2ll(phi, theta)
+
+
 class coordinates:
     def __init__(self, r1, r2, r3, spherical=False, latlon=False):
         if spherical is True:
