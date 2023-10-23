@@ -26,7 +26,7 @@ def config(xlimit=None, ylimit=None, xlabel="xlabel", ylabel="ylabel",
         ax = plt.axes(
             xlim=xlimit,
             ylim=ylimit
-            )
+        )
 
     fig.set_figwidth(figsize[0])
     fig.set_figheight(figsize[1])
@@ -164,14 +164,14 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
             rotationnum = math.degrees(rotationnum)+180
         elif i == n-1:
             ax.annotate(f'{one:.1f}', xy=(xx[arg_min], yy[arg_min]),
-                        fontsize='large', color=color)
+                        fontsize='small', color=color)
 
         else:
             ax.annotate(f'{one:.1f}', xy=(xx[arg_min], yy[arg_min]),
-                        fontsize='large', color=color, xytext=(0,-1),
+                        fontsize='small', color=color, xytext=(0, -1),
                         textcoords='offset fontsize')
             ax.annotate(f'{one:.1f}', xy=(xx[arg_max], yy[arg_max]),
-                        color=color, fontsize='large', xytext=(0, 0.5),
+                        color=color, fontsize='small', xytext=(0, 0.5),
                         textcoords='offset fontsize')
     for i, one in enumerate(lat_set):
         lats = np.full_like(lon_big, np.radians(90-one))
@@ -186,19 +186,19 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
         arg_min, arg_max = np.argmin(xx), np.argmax(xx)
         if i == 0:
             ax.annotate('longitudes', xy=(xx[arg_min], yy[arg_min]),
-                        fontsize='x-large', color=color, xytext=(0, -1),
+                        fontsize='x-small', color=color, xytext=(0, -1),
                         textcoords='offset fontsize')
             ax.annotate('latitudes', xy=(xx[arg_min], yy[arg_min]),
                         color=color,
-                        fontsize='x-large', ha='right', rotation=rotationnum,
+                        fontsize='x-small', ha='right', rotation=rotationnum,
                         xytext=(-0.5, 0), textcoords='offset fontsize')
 
         else:
             ax.annotate(f'{one:.1f}', xy=(xx[arg_min], yy[arg_min]),
-                        fontsize='large', color=color, xytext=(-2, 0),
+                        fontsize='small', color=color, xytext=(-2, 0),
                         textcoords='offset fontsize')
             ax.annotate(f'{one:.1f}', xy=(xx[arg_max], yy[arg_max]),
-                        color=color, fontsize='large',  xytext=(1,0),
+                        color=color, fontsize='small',  xytext=(1, 0),
                         textcoords='offset fontsize')
 
 
@@ -212,6 +212,9 @@ def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
         A plt.figure.
     """
     N = int(np.size(np.unique(B_map.lon)))
+    if lines > N:
+        lines = N
+
     latlims = [B_map.lat.min(), B_map.lat.max()]
     lonlims = [B_map.lon.min(), B_map.lon.max()]
     fig, ax = config(title=title, grid=False)
@@ -227,7 +230,9 @@ def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
                 x, y = cs.x, cs.y
                 s = val
                 xx[i//every], yy[i//every], sq[i//every] = x, y, s
-        ax.scatter(xx, yy, c=sq, s=ms, cmap='inferno', alpha=alpha)
+        sc = ax.scatter(xx, yy, c=sq, s=ms, cmap='inferno', alpha=alpha)
+        cbar = fig.colorbar(sc)
+        cbar.ax.set_ylabel('magnetic field z-value', rotation=270)
     else:
         xx = np.zeros(n)
         yy = np.zeros(n)

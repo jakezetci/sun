@@ -13,6 +13,7 @@ try:
     import cPickle as pickle
 except ModuleNotFoundError:
     import pickle
+from field import dipolebetter
 
 
 def distance_sphere(a, b, R):
@@ -64,7 +65,8 @@ def I3(r1, r2):
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    num = (-2*((x**2+y**2)**2) * z2)+((x**2+y**2)*(z**3 + 3*(z2**2)*z)) - 2*(z2**2)*(-z)**3
+    num = (-2*((x**2+y**2)**2) * z2)+((x**2+y**2) *
+                                      (z**3 + 3*(z2**2)*z)) - 2*(z2**2)*(-z)**3
     den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
     return num/den
 
@@ -352,7 +354,7 @@ class Grid:
 
 
 class grid(Grid):
-    # a class that exists only for compatibility reasons
+    # a class that exists only for backward compatibility reasons
     pass
 
 
@@ -392,25 +394,26 @@ class Magneticline:
         self.step = step
         self.progress = 0
 
-    def add_value(self, func, *args):
+    def add_value(self, m, dipolepos=[0, 0, 0]):
         vec = np.asarray(self.values[-1])
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector)
-
-        self.values.append(func(coordinates(*new_point), returnxyz=True, *args))
-        self.points.append(coordinates(*new_point))
-        self.pointsxyz.append(new_point)
+        new_point = coordinates(*new_point)
+        self.values.append(dipolebetter(
+            new_point, m, dipolepos, returnxyz=True))
+        self.points.append(new_point)
+        self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
     def add_value_comp(self, B_map):
         vec = np.asarray(self.values[-1])
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector)
-
-        val = B_comp(coordinates(*new_point), B_map)
+        new_point = coordinates(*new_point)
+        val = B_comp(new_point, B_map)
         self.values.append(val)
-        self.points.append(coordinates(*new_point))
-        self.pointsxyz.append(new_point)
+        self.points.append(new_point)
+        self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
     def line_by_length(self, func, length, *args):
@@ -425,7 +428,7 @@ class Magneticline:
 
     def save_pkl(self, name=False):
         if name is False:
-            name = f'{self.initial_point.r:.3}-{self.initial_value:.3}'
+            name = f'{self.initial_point.r:.2}-{self.initial_value:.2}'
         with open(f'maglines/{name}.pkl',
                   'wb') as outp:
             pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)

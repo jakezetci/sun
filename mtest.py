@@ -7,7 +7,9 @@ Created on Mon Sep 18 00:26:45 2023
 
 import numpy as np
 import pickle
+from coordinates import ll2pt
 
-b = 'any'
-with open(f'Lmaps/{b}.pkl', 'wb') as f:
-    pickle.dump(b, f, pickle.HIGHEST_PROTOCOL)
+phi, theta = ll2pt(60,30)
+
+alpha = np.arctan(np.cos(theta)/(np.sin(theta)*np.sin(phi)))
+alphadeg = np.rad2deg(alpha)

@@ -23,12 +23,12 @@ import time
 
 
 def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
-                      latlim=[-30,30], lonlim=[-30,30], N=2, M=1e12,
+                      latlim=[-30, 30], lonlim=[-30, 30], N=2, M=1e12,
                       Rrelative=np.array([10000, 4, -4]), relative=True,
                       timestamps=10):
 
-    NN = (np.sqrt(iters / ((lattest[1] - lattest[0])*
-                              (lontest[1] -  lontest[0]))))
+    NN = (np.sqrt(iters / ((lattest[1] - lattest[0]) *
+                           (lontest[1] - lontest[0]))))
     n = int(NN * (lattest[1] - lattest[0]))
     m = int(NN * (lontest[1] - lontest[0]))
     iters = n*m
@@ -61,7 +61,8 @@ def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d)/B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f'value {i} / {iters} done in {toc - tic:0.2f} seconds')
@@ -70,16 +71,22 @@ def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
     if relative:
         fig, (error_lat,
               error_lon) = subplots(2, 1,
-                                    xlabel=['dipole latitude','dipole longitude'],
-                                    ylabel=['relative error', 'relative error'],
-                                    title=['MAPE of latitudes', 'MAPE of longitudes'])
+                                    xlabel=['dipole latitude',
+                                            'dipole longitude'],
+                                    ylabel=['relative error',
+                                            'relative error'],
+                                    title=['MAPE of latitudes',
+                                           'MAPE of longitudes'])
     else:
         fig, (error_lat,
               error_lon) = subplots(2, 1,
-                                    xlabel=['dipole latitude','dipole longitude'],
-                                    ylabel=['mean square error', 'mean square error'],
-                                    title=['MSE of latitudes', 'MSE of longitudes'])
-    points_lat = np.where(longitudes==lon_min)
+                                    xlabel=['dipole latitude',
+                                            'dipole longitude'],
+                                    ylabel=['mean square error',
+                                            'mean square error'],
+                                    title=['MSE of latitudes',
+                                           'MSE of longitudes'])
+    points_lat = np.where(longitudes == lon_min)
     error_lat.plot(latitudes[points_lat], mse_array[points_lat], 'o', ms=8,
                    label=f'longitude ={lon_min:.2f}')
     error_lat.legend(loc='best', fontsize='x-large')
@@ -90,7 +97,7 @@ def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
 
     map_error = Grid(600000, latitudes, longitudes, hs=hs)
     for j, val in enumerate(mse_array):
-        map_error.set_value(val, 0,0, vector=False, index=j)
+        map_error.set_value(val, 0, 0, vector=False, index=j)
     plotmap(map_error, lines=1, ms=40)
     return (latitudes[index_min], longitudes[index_min], mse_array[index_min],
             mse_xyz_array[index_min], B_c_array[index_min], B_d_array[index_min],
@@ -102,8 +109,8 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
                      dipolelat=10, dipolelon=17, relative=True, rRelative=10000,
                      timestamps=10):
 
-    NN = (np.sqrt(iters / ((lattest[1] - lattest[0])*
-                              (lontest[1] -  lontest[0]))))
+    NN = (np.sqrt(iters / ((lattest[1] - lattest[0]) *
+                           (lontest[1] - lontest[0]))))
     n = int(NN * (lattest[1] - lattest[0]))
     m = int(NN * (lontest[1] - lontest[0]))
     iters = n*m
@@ -136,7 +143,8 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d)/B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f'value {i} / {iters} done in {toc - tic:0.2f} seconds')
@@ -145,16 +153,20 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
     if relative:
         fig, (error_lat,
               error_lon) = subplots(2, 1,
-                                    xlabel=['point latitude','point longitude'],
-                                    ylabel=['relative error', 'relative error'],
+                                    xlabel=['point latitude',
+                                            'point longitude'],
+                                    ylabel=['relative error',
+                                            'relative error'],
                                     title=['MAPE of latitudes', 'MAPE of longitudes'])
     else:
         fig, (error_lat,
               error_lon) = subplots(2, 1,
-                                    xlabel=['point latitude','point longitude'],
-                                    ylabel=['mean square error', 'mean square error'],
+                                    xlabel=['point latitude',
+                                            'point longitude'],
+                                    ylabel=['mean square error',
+                                            'mean square error'],
                                     title=['MSE of latitudes', 'MSE of longitudes'])
-    points_lat = np.where(longitudes==lon_min)
+    points_lat = np.where(longitudes == lon_min)
     error_lat.plot(latitudes[points_lat], mse_array[points_lat], 'o', ms=8,
                    label=f'longitude ={lon_min:.2f}')
     points_lon = np.where(latitudes == lat_min)
@@ -165,7 +177,7 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
     error_lon.legend(loc="upper right", fontsize='x-large')
     map_error = Grid(600000, latitudes, longitudes, hs=hs)
     for j, val in enumerate(mse_array):
-        map_error.set_value(val, 0,0, vector=False, index=j)
+        map_error.set_value(val, 0, 0, vector=False, index=j)
     plotmap(map_error, lines=1, ms=40)
     return (latitudes[index_min], longitudes[index_min], mse_array[index_min],
             mse_xyz_array[index_min], B_c_array[index_min], B_d_array[index_min],
@@ -203,7 +215,8 @@ def test_borders(sizelims, iters=100, dipoleR=600000,
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d)/B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f'value {i} / {iters} done in {toc - tic:0.2f} seconds')
@@ -220,9 +233,8 @@ def test_borders(sizelims, iters=100, dipoleR=600000,
                                  'MSE of grid size', logscaley=True, gapx=1.0,
                                  gapy=0.5)
     error_size.plot(size_array, mse_array, 'o', ms=6,
-                   label=f'size min ={sizemin:.2f}')
+                    label=f'size min ={sizemin:.2f}')
     error_size.legend(loc='best', fontsize='x-large')
-
 
     return (size_array[index_min], mse_array[index_min],
             mse_xyz_array[index_min], B_c_array[index_min], B_d_array[index_min],
@@ -230,7 +242,7 @@ def test_borders(sizelims, iters=100, dipoleR=600000,
 
 
 def test_density(Nlims, iters=10, dipoleR=600000,
-                 latlim=[-10,10], lonlim=[-10,10], M=1e12,
+                 latlim=[-10, 10], lonlim=[-10, 10], M=1e12,
                  Rrelative=np.array([10000, 4, -4]), relative=True,
                  dipolelat=10, dipolelon=17,
                  timestamps=10):
@@ -258,7 +270,8 @@ def test_density(Nlims, iters=10, dipoleR=600000,
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d)/B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f'value {i} / {iters} done in {toc - tic:0.2f} seconds')
@@ -266,22 +279,23 @@ def test_density(Nlims, iters=10, dipoleR=600000,
     Nmin = N_array[index_min]
     if relative:
         fig, error_N = config(None, None,
-                                 'grid N in degree', 'relative error (log scale)',
-                                 'MAPE of grid N', logscalex=False, logscaley=True, 
-                                 gapx=1.0,
-                                 gapy=0.1)
+                              'grid N in degree', 'relative error (log scale)',
+                              'MAPE of grid N', logscalex=False, logscaley=True,
+                              gapx=1.0,
+                              gapy=0.1)
     else:
-        fig, error_N = config(None,None,
-                                 'grid N in degrees', 'absolute error (log scale) ',
-                                 'MSE of grid N', logscalex=False, logscaley=True,
-                                 gapx=1.0,
-                                 gapy=0.1)
+        fig, error_N = config(None, None,
+                              'grid N in degrees', 'absolute error (log scale) ',
+                              'MSE of grid N', logscalex=False, logscaley=True,
+                              gapx=1.0,
+                              gapy=0.1)
     error_N.plot(N_array, mse_array, 'o', ms=6,
-                   label=f'N min ={Nmin:.2f}')
+                 label=f'N min ={Nmin:.2f}')
     error_N.legend(loc='best', fontsize='x-large')
     return (N_array[index_min], mse_array[index_min],
             mse_xyz_array[index_min], B_c_array[index_min], B_d_array[index_min],
             index_min)
+
 
 if __name__ == "__main__":
     """
@@ -294,7 +308,7 @@ if __name__ == "__main__":
     l1, l2 = [-20, 20], [-20, 20]
     rr1, rr2, rr3, rr4, rr5, rr6, rr7 = test_pointlatlon(l1, l2, iters=500,
                                                          latlim=[-12, 12], lonlim=[-12, 12],
-                                                         relative=True, 
+                                                         relative=True,
                                                          dipolelat=60, dipolelon=30,
                                                          dipoleR=650000)
 
@@ -304,14 +318,13 @@ if __name__ == "__main__":
                                                       dipolelat=60, dipolelon=30,
                                                       timestamps=10)
 
-
     perfsize = [-rrr1, +rrr1]
     N_lims = [0.2, 10]
-    t1, t2, t3, t4, t5, t6 = test_density(N_lims,iters=20,
+    t1, t2, t3, t4, t5, t6 = test_density(N_lims, iters=20,
                                           Rrelative=np.array([10000, rr1, rr2]), relative=True,
                                           dipolelat=60, dipolelon=30,
                                           latlim=perfsize, lonlim=perfsize,
-                                                      timestamps=10)
+                                          timestamps=10)
 
     print(f'best parameters: ',
           f'point relative coors: {rr1:0.2f, rr2:0.2f},',
