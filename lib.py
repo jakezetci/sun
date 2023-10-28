@@ -234,6 +234,12 @@ class Grid:
         self.num = np.size(latitudes)
         self.values = np.zeros_like(latitudes)
         self.valuesvector = np.zeros((self.num, 3))
+        if hasattr(r, "__len__"):
+            self.r_array = r
+            self.r = np.mean(r)
+        else:
+            self.r_array = np.full_like(self.values, r)
+            self.r = r
         self.r = r
         self.lat = latitudes
         self.lon = longitudes
@@ -366,7 +372,7 @@ def load_grid(df):
     return grid
 
 
-def create_grid(latlim, lonlim, N, name=False):
+def create_grid(latlim, lonlim, N, r=696340, name=False):
     # N - количество ячеек на градус
     n = int((latlim[1] - latlim[0]) * N)
     m = int((lonlim[1] - lonlim[0]) * N)
@@ -376,7 +382,6 @@ def create_grid(latlim, lonlim, N, name=False):
     longitudes = np.tile(lons, n)
     L = np.asarray([latitudes, longitudes])
     latitudes, longitudes = L
-    r = 696340
     hs = (np.pi / 180) * (lonlim[1] - lonlim[0]) / m
     B_mapempty = Grid(r, latitudes, longitudes, hs)
     if name is not False:
@@ -396,7 +401,7 @@ class Magneticline:
 
     def add_value(self, m, dipolepos=[0, 0, 0]):
         vec = np.asarray(self.values[-1])
-        new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
+        new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
             self.points[-1].vector)
         new_point = coordinates(*new_point)
         self.values.append(dipolebetter(
