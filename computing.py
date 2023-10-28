@@ -19,19 +19,17 @@ import time
 import telebot
 import alertbot
 
-try:
-    import cPickle as pickle
-except ModuleNotFoundError:
-    import pickle
+import pickle
 
 call_id = 412289661
 
-def alert_bot(status_message, image=False,
+
+def alert_bot(status_message, imagepath=False,
               API_TOKEN='6559135670:AAHH8GpwVNX5k90FdFdWArasp9sc05fSLpI'):
     bot = telebot.TeleBot('6559135670:AAHH8GpwVNX5k90FdFdWArasp9sc05fSLpI')
     bot.send_message(call_id, status_message)
-    if image is not False:
-        bot.send_photo(call_id, image)
+    if imagepath is not False:
+        bot.send_photo(call_id, telebot.types.InputFile(imagepath))
 
 
 def crtname(name):
@@ -133,7 +131,7 @@ def comp_grid(grid, B_map, vector=False, name=False,
 
 
 def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
-                       maxsteps=200, timestamp=False, alert=True):
+                       maxsteps=200, timestamp=10000, alert=True):
 
     if name is False:
         name = f'{magline.initial_point.r:.2}-{magline.initial_value:.2} dipole {dipole}'
@@ -141,22 +139,13 @@ def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
     magline.save_pkl(name=f'checkpoint {name}')
     start = magline.progress
     tic = time.perf_counter()
-    if timestamp is not False:
-        for i in range(start, maxsteps):
-            magline.add_value(dipole, dipolepos)
-            if i % timestamp == 0:
-                toc = time.perf_counter()
-                print(
-                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
-                tic = time.perf_counter()
-                magline.save_pkl(name)
-            else:
-                magline.save_pkl(name=f'checkpoint1 {name}')
-    else:
-        for i in range(start, maxsteps):
+    for i in range(start, maxsteps):
+        magline.add_value(dipole, dipolepos)
+        if i % timestamp == 0:
+            toc = time.perf_counter()
+            print(f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
             tic = time.perf_counter()
-            magline.add_value(dipolebetter, dipole, dipolepos)
-            magline.save_pkl(name=f'checkpoint1 {name}')
+            magline.save_pkl(name)
 
     magline.save_pkl(name)
     if alert is True:
@@ -166,7 +155,7 @@ def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
 
 
 def comp_magneticline(magline, B_map, name=False, returnobj=False,
-                      maxsteps=200, timestamp=False, alert=True):
+                      maxsteps=200, timestamp=1000, alert=True):
 
     if name is False:
         name = crtname(name)
@@ -174,30 +163,20 @@ def comp_magneticline(magline, B_map, name=False, returnobj=False,
     magline.save_pkl(name=f'checkpoint {name}')
     start = magline.progress
     tic = time.perf_counter()
-    if timestamp is not False:
-        for i in range(start, maxsteps):
-
-            magline.add_value_comp(B_map)
-            if i % timestamp == 0:
-                toc = time.perf_counter()
-                print(
-                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
-                tic = time.perf_counter()
-                magline.save_pkl(name)
-            else:
-                magline.save_pkl(name=f'checkpoint1 {name}')
-    else:
-        for i in range(start, maxsteps):
+    for i in range(start, maxsteps):
+        magline.add_value_comp(B_map)
+        if i % timestamp == 0:
+            toc = time.perf_counter()
+            print(
+                f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
             tic = time.perf_counter()
-            magline.add_value_comp(B_map)
-            magline.save_pkl(name=f'checkpoint1 {name}')
+            magline.save_pkl(name)
     magline.save_pkl(name)
     if alert is True:
         alert_bot('расчётная магнитная линия посчиталась...')
 
     if returnobj:
         return magline
-    
 
 
 def create_model_plotmap(latlim, lonlim, N, M, dipolepos, vector=False,
