@@ -11,7 +11,7 @@ import matplotlib as mpl
 import math
 import mplstereonet
 from coordinates import coordinates
-from lib import B_comp, Grid, create_grid
+from lib import B_comp, Grid, create_grid, Magneticline
 from field import dipolebetter
 from plots import sphere, disk, plotmap
 import os
@@ -76,7 +76,7 @@ def model_grid(B_map, dipole, dipolepos, vector=False, name=False,
     for i in range(B_map.progress, B_map.num):
         lat, lon = B_map.latlon[i]
         r1 = coordinates(r, lat, lon, latlon=True)
-        B_map.set_value(dipolebetter(r1, m=dipole, rdipole=dipolepos,
+        B_map.set_value(dipolebetter(r1, dipolemoment=dipole, rdipole=dipolepos,
                                      returnxyz=vector, returnBl=not vector),
                         lat, lon, index=i, vector=vector)
         B_map.progress1()
@@ -130,23 +130,46 @@ def comp_grid(grid, B_map, vector=False, name=False,
         return grid
 
 
-def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
-                       maxsteps=200, timestamp=10000, alert=True):
+def model_magneticline(magline: Magneticline, dipole, dipolepos, name=False, returnobj=False,
+                       maxsteps=2000, timestamp=10000, stoppoint=None, alert=True):
+
+    def stoppoint_model():
+        start = magline.progress
+        tic = time.perf_counter()
+        for i in range(start, maxsteps):
+            magline.add_value(dipole, dipolepos)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(
+                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+            if magline.points[-1].r < stoppoint:
+                break
+        return magline
+
+    def steps_model():
+        start = magline.progress
+        tic = time.perf_counter()
+        for i in range(start, maxsteps):
+            magline.add_value(dipole, dipolepos)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(
+                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+        return magline
 
     if name is False:
         name = f'{magline.initial_point.r:.2}-{magline.initial_value:.2} dipole {dipole}'
 
-    magline.save_pkl(name=f'checkpoint {name}')
     start = magline.progress
     tic = time.perf_counter()
-    for i in range(start, maxsteps):
-        magline.add_value(dipole, dipolepos)
-        if i % timestamp == 0:
-            toc = time.perf_counter()
-            print(f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
-            tic = time.perf_counter()
-            magline.save_pkl(name)
-
+    if stoppoint is None:
+        magline = steps_model()
+    else:
+        magline = stoppoint_model()
     magline.save_pkl(name)
     if alert is True:
         alert_bot('модельная магнитная линия посчиталась...')
@@ -154,23 +177,43 @@ def model_magneticline(magline, dipole, dipolepos, name=False, returnobj=False,
         return magline
 
 
-def comp_magneticline(magline, B_map, name=False, returnobj=False,
-                      maxsteps=200, timestamp=1000, alert=True):
+def comp_magneticline(magline: Magneticline, B_map, name=False, returnobj=False,
+                      maxsteps=2000, timestamp=1000, alert=True, stoppoint=False):
 
+    def steps_comp():
+        start = magline.progress
+        tic = time.perf_counter()
+        for i in range(start, maxsteps):
+            magline.add_value_comp(B_map)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(
+                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+        return magline
+
+    def stoppoint_comp():
+        start = magline.progress
+        tic = time.perf_counter()
+        for i in range(start, maxsteps):
+            magline.add_value_comp(B_map)
+            if i % timestamp == 0:
+                toc = time.perf_counter()
+                print(
+                    f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
+                tic = time.perf_counter()
+                magline.save_pkl(name)
+            if magline.points[-1].r < stoppoint:
+                break
+        return magline
     if name is False:
         name = crtname(name)
 
-    magline.save_pkl(name=f'checkpoint {name}')
-    start = magline.progress
-    tic = time.perf_counter()
-    for i in range(start, maxsteps):
-        magline.add_value_comp(B_map)
-        if i % timestamp == 0:
-            toc = time.perf_counter()
-            print(
-                f'values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds')
-            tic = time.perf_counter()
-            magline.save_pkl(name)
+    if stoppoint is None:
+        magline = steps_comp()
+    else:
+        magline = stoppoint_comp()
     magline.save_pkl(name)
     if alert is True:
         alert_bot('расчётная магнитная линия посчиталась...')
@@ -180,11 +223,11 @@ def comp_magneticline(magline, B_map, name=False, returnobj=False,
 
 
 def create_model_plotmap(latlim, lonlim, N, M, dipolepos, vector=False,
-                         name=False, n=10, alpha=0.7, lw=0.8):
+                         name=False, lines=10, alpha=0.7, lw=0.8):
     grid = create_grid(latlim, lonlim, N)
     computed = model_grid(grid, M, dipolepos, name=name, returnobj=True,
                           vector=vector)
-    return plotmap(computed, lines=n, alpha=alpha, lw=lw)
+    return plotmap(computed, lines=lines, alpha=alpha, lw=lw)
 
 
 if __name__ == "__main__":

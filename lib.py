@@ -399,7 +399,7 @@ class Magneticline:
         self.step = step
         self.progress = 0
 
-    def add_value(self, m, dipolepos=[0, 0, 0]):
+    def add_value(self, m, dipolepos=[0, 0, 0], stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
             self.points[-1].vector)
@@ -410,7 +410,7 @@ class Magneticline:
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
-    def add_value_comp(self, B_map):
+    def add_value_comp(self, B_map, stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector)
