@@ -29,7 +29,7 @@ m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e12
 pos = coordinates(600000, dipolelat, dipolelon, latlon=True)
 pos = pos.vector
 pos = [0, 0, 0]
-M = np.asarray([0, 2, 0])
+M = np.asarray(ll2xyz(60, 60, 1)) * 1e8
 
 q1, q2 = 1e18, -1e18
 rq1, rq2 = [0, 4, 0], [0, -4, 0]
@@ -59,11 +59,11 @@ ax.quiver(pointsx, pointsy, uu, vv, np.arctan2(uu, vv))
 
 point1 = coordinates(5, 5, 0)
 in_value = dipolebetter(point1, M, returnxyz=True)
-line = Magneticline(point1, in_value, step=1)
-steps = 100000
+line = Magneticline(point1, in_value, step=100)
+steps = 2000
 line = model_magneticline(line, M, pos, returnobj=True,
                           name='model newdipole v6_5', maxsteps=steps,
-                          timestamp=10000, alert=alerts)
+                          timestamp=1000, alert=alerts)
 
 xx_model, yy_model, zz_model = np.array(line.pointsxyz).T
 
