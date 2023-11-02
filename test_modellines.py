@@ -47,13 +47,14 @@ lonlims = [pointlon - pointlon, pointlon + borderlon]
 steps = 2000
 with open('Lmaps/Диполь 60, 30.pkl', 'rb') as fmap:
     picturemap = pickle.load(fmap)
-fig, ax = plotmap(picturemap, lines=20, alpha=0.6, lw=1)
+fig, ax = plotmap(picturemap, lines=20, alpha=0.6, lw=1, ignoretop=True)
 
 lat_array = np.linspace(45, 61, num=17)
 pointlat, pointlon = 52, 30
-for lat in lat_array:
+points = [[60, 36], [59, 38], [58, 32]]
+for lat, lon in points:
     perfect_point = coordinates(
-        696340+100, lat, pointlon, latlon=True)
+        696340+100, lat, lon, latlon=True)
     in_value = dipolebetter(perfect_point, dipolemoment=m,
                             rdipole=pos, returnxyz=True)
     line_model = Magneticline(perfect_point, in_value, step=100)
@@ -64,7 +65,7 @@ for lat in lat_array:
     xx_model, yy_model, zz_model = np.array(line_model.pointsxyz).T
 
     ax.plot(xx_model, yy_model, '--',
-            label=f'model {lat}', lw=2)
+            label=f'model {lat} {lon}', lw=2)
 
 
 ax.legend(loc='best', fontsize='x-large')

@@ -142,7 +142,7 @@ def sphere(ax, latlim=(-90, 90), lonlim=(-180, 180), n=5,
 
 
 def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
-         r=696340, color='dimgrey', lw=0.8):
+         r=696340, color='dimgrey', lw=0.8, ignoretop=False):
     lat_set = np.linspace(latlim[0], latlim[1], n)
     lon_set = np.linspace(lonlim[0], lonlim[1], n)
     lat_big = np.radians(90 - np.linspace(latlim[0], latlim[1]))
@@ -170,9 +170,10 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
             ax.annotate(f'{one:.1f}', xy=(xx[arg_min], yy[arg_min]),
                         fontsize='small', color=color, xytext=(0, -1),
                         textcoords='offset fontsize')
-            ax.annotate(f'{one:.1f}', xy=(xx[arg_max], yy[arg_max]),
-                        color=color, fontsize='small', xytext=(0, 0.5),
-                        textcoords='offset fontsize')
+            if not ignoretop:
+                ax.annotate(f'{one:.1f}', xy=(xx[arg_max], yy[arg_max]),
+                            color=color, fontsize='small', xytext=(0, 0.5),
+                            textcoords='offset fontsize')
     for i, one in enumerate(lat_set):
         lats = np.full_like(lon_big, np.radians(90-one))
 
@@ -195,7 +196,7 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
 
         else:
             ax.annotate(f'{one:.1f}', xy=(xx[arg_min], yy[arg_min]),
-                        fontsize='small', color=color, xytext=(-2, 0),
+                        fontsize='small', color=color, xytext=(-3, 0),
                         textcoords='offset fontsize')
             ax.annotate(f'{one:.1f}', xy=(xx[arg_max], yy[arg_max]),
                         color=color, fontsize='small',  xytext=(1, 0),
@@ -203,7 +204,8 @@ def disk(ax, latlim=(-90, 90), lonlim=(-90, 90), n=5,
 
 
 def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
-            alpha=1, lw=0.8):
+            alpha=1, lw=0.8, ignoretop=False, xlabel="xlabel", ylabel='ylabel',
+            xlimit=None, ylimit=None):
     """
     Args:
         B_map (Grid): a grid with either values of valuesvector.
@@ -217,7 +219,8 @@ def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
 
     latlims = [B_map.lat.min(), B_map.lat.max()]
     lonlims = [B_map.lon.min(), B_map.lon.max()]
-    fig, ax = config(title=title, grid=False)
+    fig, ax = config(title=title, grid=False, xlabel=xlabel, ylabel=ylabel,
+                     xlimit=xlimit, ylimit=ylimit)
     n = B_map.num
     if np.linalg.norm(B_map.valuesvector[0]) == 0:
         n = B_map.num
@@ -232,7 +235,7 @@ def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
                 xx[i//every], yy[i//every], sq[i//every] = x, y, s
         sc = ax.scatter(xx, yy, c=sq, s=ms, cmap='inferno', alpha=alpha)
         cbar = fig.colorbar(sc)
-        cbar.ax.set_ylabel('magnetic field z-value', rotation=270)
+        cbar.ax.set_ylabel('magnetic field z-value in Mx/cm2', rotation=270)
     else:
         xx = np.zeros(n)
         yy = np.zeros(n)
@@ -249,5 +252,5 @@ def plotmap(B_map, mode=disk, limit=False, every=1, lines=1, ms=0.5, title='',
             xx[i], yy[i], uu[i], vv[i] = x, y, u, v
             cc[i] = math.sqrt(u**2 + v**2)
         ax.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
-    mode(ax, latlims, lonlims, n=lines, r=B_map.r, lw=lw)
+    mode(ax, latlims, lonlims, n=lines, r=B_map.r, lw=lw, ignoretop=ignoretop)
     return fig, ax
