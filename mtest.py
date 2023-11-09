@@ -9,7 +9,14 @@ import numpy as np
 import pickle
 from coordinates import ll2pt
 
-phi, theta = ll2pt(60,30)
+x = np.arange(6).reshape(2, 3)
+a = np.argwhere(x > 1)
+add = np.full_like(a, [1, 2])
+b = a + add
+print(np.vstack([a, add]))
 
-alpha = np.arctan(np.cos(theta)/(np.sin(theta)*np.sin(phi)))
-alphadeg = np.rad2deg(alpha)
+array = [1, 2]
+array2 = [1, 2, 3]
+
+array.append(array2)
+print(array)

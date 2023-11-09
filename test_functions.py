@@ -48,6 +48,15 @@ print(Bc, Bd)
 
 
 steps = 2000
+
+
+with open('maglines/presentable model line 60 36.pkl', 'rb') as f_model:
+    line_model = pickle.load(f_model)
+with open('maglines/presentable comp line 60 36.pkl', 'rb') as f_comp:
+    line_comp = pickle.load(f_comp)
+
+"""
+
 line_model = Magneticline(perfect_point, in_value, step=100)
 
 line_comp = Magneticline(perfect_point, in_value, step=300)
@@ -62,15 +71,6 @@ line_comp = comp_magneticline(line_comp, Lmap, returnobj=True,
                               timestamp=100, alert=alerts, stoppoint=696000)
 
 
-"""
-
-
-
-
-with open('maglines/model newdipole v6.pkl', 'rb') as f_model:
-    line_model = pickle.load(f_model)
-with open('maglines/comp newdipole v6.pkl', 'rb') as f_comp:
-    line_comp = pickle.load(f_comp)
 
 
 """
