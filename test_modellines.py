@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates, ll2xyz, ll2pt, pt2xyz
-from lib import B_comp, Grid, create_grid, Magneticline
+from lib import B_comp_map, Grid, create_grid, Magneticline
 from field import dipolebetter
 from plots import sphere, disk, plotmap
 from computing import model_grid, model_magneticline, comp_magneticline, comp_grid

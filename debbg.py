@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates, ll2xyz
-from lib import B_comp, Grid
+from lib import B_comp_map, Grid
 from field import dipolebetter
 from plots import sphere
 from plotting import plotmap
@@ -35,6 +35,7 @@ def create_grid(latlim, lonlim, N):
     B_mapempty = Grid(r, latitudes, longitudes, hs)
     return B_mapempty
 
+
 m = np.asarray(ll2xyz(12, 12, 1)) * 1e12
 pos = coordinates(640000, 12, 12, latlon=True)
 pos = pos.vector
@@ -45,14 +46,14 @@ lonlims = [-10, 40]
 N = 5
 empty = create_grid(latlims, lonlims, N)
 
-mapL = model_grid(empty, dipole=m, dipolepos=pos,
-                  vector=False, name='Lexc', returnobj=True)
+mapL = model_grid(
+    empty, dipole=m, dipolepos=pos, vector=False, name="Lexc", returnobj=True
+)
 
 
-
-r = coordinates(696340+11000, 10, 10, latlon=True)
-B, debug = B_comp(r, mapL, debug=True, change=False)
-B2 = B_comp(r, mapL, debug=False, change=True)
+r = coordinates(696340 + 11000, 10, 10, latlon=True)
+B, debug = B_comp_map(r, mapL, debug=True, change=False)
+B2 = B_comp_map(r, mapL, debug=False, change=True)
 
 print(B)
 B_mod = dipolebetter(r, m=m, rdipole=pos, returnxyz=True)
@@ -66,9 +67,9 @@ for i in range(N):
     lat, lon = map_debug.latlon[i]
     map_debug.set_value(abs(debug[i][1]), lat, lon, index=i, vector=False)
     map_debug2.set_value(debug[i][1], lat, lon, index=i, vector=False)
-j = np.argmax(debug[:,1])
+j = np.argmax(debug[:, 1])
 print(map_debug.values[j], map_debug.latlon[j])
-j = np.argmax(debug[:,0])
+j = np.argmax(debug[:, 0])
 print(map_debug.values[j], map_debug.latlon[j])
 
 plotmap(map_debug, lines=100)
@@ -76,17 +77,17 @@ plotmap(map_debug2, lines=100)
 plotmap(mapL, lines=20)
 
 plt.figure()
-plt.plot(mapL.lat, debug[:, 1], 'o', ms=0.2)
-yy = np.linspace(np.min(debug[:,1 ]), np.max(debug[:,1]))
+plt.plot(mapL.lat, debug[:, 1], "o", ms=0.2)
+yy = np.linspace(np.min(debug[:, 1]), np.max(debug[:, 1]))
 xxdot = np.full_like(yy, 60)
 xxdot2 = np.full_like(yy, 30)
 plt.plot(xxdot, yy)
 
-plt.title('lats')
+plt.title("lats")
 plt.figure()
-plt.plot(mapL.lon, debug[:, 1], 'o', ms=0.2)
-plt.plot(xxdot2, yy)    
-plt.title('lons')
+plt.plot(mapL.lon, debug[:, 1], "o", ms=0.2)
+plt.plot(xxdot2, yy)
+plt.title("lons")
 
 """
 plt.figure()

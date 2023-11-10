@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates, ll2xyz
-from lib import B_comp, Grid, create_grid
+from lib import B_comp_map, Grid, create_grid
 from field import dipolebetter
 from plots import sphere, subplots, config, plotmap
 from computing import model_grid, model_magneticline, comp_magneticline, comp_grid
@@ -54,7 +54,7 @@ def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
                            N=N)
         mapL = model_grid(grid, dipole=mm, dipolepos=pos,
                           vector=False, name='Ltemptest', returnobj=True)
-        B_c = B_comp(r_point, mapL)
+        B_c = B_comp_map(r_point, mapL)
         B_d = dipolebetter(r_point, m=mm, rdipole=pos, returnxyz=True)
         B_c_array[i], B_d_array[i] = B_c, B_d
         if relative:
@@ -136,7 +136,7 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
                            N=N)
         mapL = model_grid(grid, dipole=mm, dipolepos=pos,
                           vector=False, name='Ltemptest', returnobj=True)
-        B_c = B_comp(r_point, mapL)
+        B_c = B_comp_map(r_point, mapL)
         B_d = dipolebetter(r_point, m=mm, rdipole=pos, returnxyz=True)
         B_c_array[i], B_d_array[i] = B_c, B_d
         if relative:
@@ -208,7 +208,7 @@ def test_borders(sizelims, iters=100, dipoleR=600000,
                            N=N)
         mapL = model_grid(grid, dipole=mm, dipolepos=pos,
                           vector=False, name='Ltemptest', returnobj=True)
-        B_c = B_comp(r_point, mapL)
+        B_c = B_comp_map(r_point, mapL)
         B_d = dipolebetter(r_point, m=mm, rdipole=pos, returnxyz=True)
         B_c_array[i], B_d_array[i] = B_c, B_d
         if relative:
@@ -263,7 +263,7 @@ def test_density(Nlims, iters=10, dipoleR=600000,
                            N=NN)
         mapL = model_grid(grid, dipole=mm, dipolepos=pos,
                           vector=False, name='Ltemptest', returnobj=True)
-        B_c = B_comp(r_point, mapL)
+        B_c = B_comp_map(r_point, mapL)
         B_d = dipolebetter(r_point, m=mm, rdipole=pos, returnxyz=True)
         B_c_array[i], B_d_array[i] = B_c, B_d
         if relative:

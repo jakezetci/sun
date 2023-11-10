@@ -7,16 +7,19 @@ Created on Mon Sep 18 00:26:45 2023
 
 import numpy as np
 import pickle
-from coordinates import ll2pt
+from coordinates import ll2pt, coordinates
+from lib import Grid
+import pandas as pd
+from plots import config
 
-x = np.arange(6).reshape(2, 3)
-a = np.argwhere(x > 1)
-add = np.full_like(a, [1, 2])
-b = a + add
-print(np.vstack([a, add]))
+dates = pd.date_range(start="2023-08-08 00:12:00",
+                      freq="6H", periods=4).values
+ts = pd.to_datetime(str(dates[0]))
+d = ts.strftime('%Y.%m.%d %I:%M%p')
+print(d)
+print(type(dates[0]))
 
-array = [1, 2]
-array2 = [1, 2, 3]
+array = np.arange(1, 5)
 
-array.append(array2)
-print(array)
+fig, ax = config()
+ax.plot(dates, array)

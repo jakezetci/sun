@@ -9,7 +9,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tck
 from coordinates import coordinates
-from lib import B_comp, Grid
+from lib import B_comp_map, Grid
 from field import B_dipole
 import numpy as np
 import math

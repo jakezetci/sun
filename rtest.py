@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from coordinates import coordinates
-from lib import B_comp, Grid, ll2xyz
+from lib import B_comp_map, Grid, ll2xyz
 from field import dipolebetter
 from plots import sphere
 

@@ -7,7 +7,7 @@ Created on Mon Jul 24 22:47:33 2023
 
 import numpy as np
 from coordinates import coordinates
-from lib import B_comp, grid
+from lib import B_comp_map, grid
 from field import B_dipole
 
 latitudes , longitudes = np.loadtxt('lat-lon.txt')
@@ -25,5 +25,5 @@ for latlon in B_map.latlon:
 
 
 r = coordinates(700000, 0, 0, latlon=True)
-B_p = B_comp(r, base_grid, B_map)
+B_p = B_comp_map(r, base_grid, B_map)
 print(B_p)

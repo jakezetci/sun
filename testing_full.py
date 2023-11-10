@@ -11,7 +11,7 @@ import matplotlib as mpl
 import math
 import mplstereonet
 from coordinates import coordinates
-from lib import B_comp, Grid
+from lib import B_comp_map, Grid
 from field import dipolebetter
 from plots import sphere
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     for (lat, lon) in B_map_high.latlon:
         r1 = coordinates(r_high, lat, lon, latlon=True)
-        B_c = B_comp(r1, B_map)
+        B_c = B_comp_map(r1, B_map)
 
         B_map_comp.set_value(B_c, lat, lon, vector=True)
 
