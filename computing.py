@@ -21,7 +21,11 @@ import alertbot
 
 import pickle
 
-call_id = 412289661
+with open('callid.txt') as f:
+    call_id = int(f.read())
+
+with open('TOKEN.txt') as ff:
+    API_TOKEN = ff.read()
 
 
 def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
@@ -43,8 +47,7 @@ def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
 
 def alert_bot(
     status_message,
-    imagepath=False,
-    API_TOKEN="6559135670:AAHH8GpwVNX5k90FdFdWArasp9sc05fSLpI",
+    imagepath=False
 ):
     bot = telebot.TeleBot(API_TOKEN)
     bot.send_message(call_id, status_message)
