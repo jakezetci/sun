@@ -16,8 +16,16 @@ import astropy.units as u
 import astropy.time
 import textwrap
 import sunpy.map.sources
-from coordinates import xyz2ll
+from coordinates import xyz2ll, xyR2xyz, coordinates
 from lib import Grid
+import time
+from plots import config
+import pandas as pd
+from lib import B_comp
+
+
+def arcsecs_to_radian(arcsecs):
+    return np.radians(arcsecs / 3600)
 
 
 def fits_to_Grid(MAP):
@@ -31,29 +39,36 @@ def fits_to_Grid(MAP):
         TYPE: DESCRIPTION.
 
     """
+
     def get_area(xind: int, yind: int):
         def get_vector(ind1, ind2):
-            point = MAP.pixel_to_world(u.Quantity(ind1, unit='pix'),
-                                       u.Quantity(ind2, unit='pix'))
-            vector = np.array(point.heliocentric.x.value,
-                              point.heliocentric.y.value, point.heliocentric.z.value)
+            point = MAP.pixel_to_world(
+                u.Quantity(ind1, unit="pix"), u.Quantity(ind2, unit="pix")
+            )
+            vector = np.array(
+                point.heliocentric.x.value,
+                point.heliocentric.y.value,
+                point.heliocentric.z.value,
+            )
             return vector
 
-        vectorA = get_vector(xind-1, yind+1)
-        vectorB = get_vector(xind+1, yind+1)
-        vectorC = get_vector(xind+1, yind-1)
-        vectorD = get_vector(xind-1, yind-1)
+        vectorA = get_vector(xind - 1, yind + 1)
+        vectorB = get_vector(xind + 1, yind + 1)
+        vectorC = get_vector(xind + 1, yind - 1)
+        vectorD = get_vector(xind - 1, yind - 1)
 
-        sideAB = np.linalg.norm(vectorA-vectorB)
-        sideBC = np.linalg.norm(vectorB-vectorC)
-        sideCD = np.linalg.norm(vectorC-vectorD)
-        sideDA = np.linalg.norm(vectorD-vectorA)
+        sideAB = np.linalg.norm(vectorA - vectorB)
+        sideBC = np.linalg.norm(vectorB - vectorC)
+        sideCD = np.linalg.norm(vectorC - vectorD)
+        sideDA = np.linalg.norm(vectorD - vectorA)
 
-        diagAC = np.linalg.norm(vectorA-vectorC)
-        diagBD = np.linalg.norm(vectorB-vectorD)
+        diagAC = np.linalg.norm(vectorA - vectorC)
+        diagBD = np.linalg.norm(vectorB - vectorD)
 
-        area = 0.25 * np.sqrt(4*diagAC**2 * diagBD**2 -
-                              (sideAB**2 + sideCD**2 - sideBC**2 - sideDA ** 2) ** 2)
+        area = 0.25 * np.sqrt(
+            4 * diagAC**2 * diagBD**2
+            - (sideAB**2 + sideCD**2 - sideBC**2 - sideDA**2) ** 2
+        )
 
         return area
 
@@ -63,8 +78,9 @@ def fits_to_Grid(MAP):
     gridN = nonNanindeces.shape[0]
     sunlats, sunlons, values, areas, R = np.zeros((5, gridN))
     for i, (xindex, yindex) in enumerate(nonNanindeces):
-        skycoord = MAP.pixel_to_world(u.Quantity(
-            xindex, unit='pix'), u.Quantity(yindex, unit='pix'))
+        skycoord = MAP.pixel_to_world(
+            u.Quantity(xindex, unit="pix"), u.Quantity(yindex, unit="pix")
+        )
         x = skycoord.heliocentric.x.value
         y = skycoord.heliocentric.y.value
         z = skycoord.heliocentric.z.value
@@ -80,24 +96,114 @@ def fits_to_Grid(MAP):
     return returnGrid
 
 
+def bitmaps_to_points(time, onlyactive=True, downloaded=False,
+                      magnetogram=None, bitmaps=None):
+
+    if downloaded is False:
+        magnetogram, bitmaps = download_map_and_harp(time, time)
+    magnetogram = np.asarray(magnetogram)
+    MAP = fits.open(magnetogram[0])
+    dataMap, hdrMap = MAP[1].data, MAP[1].header
+    dOBS = hdrMap["DSUN_OBS"]
+    pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
+
+    d_pixel = np.mean([pxsizeX, pxsizeY])
+
+    d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+
+    r_sun = hdrMap["RSUN_REF"]
+
+    centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
+    points = []
+    values = []
+    for i, bitmap_path in enumerate(bitmaps):
+        bitmap = fits.open(bitmap_path)
+
+        databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
+        ref1, ref2 = hdrbitmap["CRPIX1"], hdrbitmap["CRPIX2"]
+        active_indeces = np.argwhere(databitmap == 34)
+        if onlyactive is False:
+            quiet_indeces = np.argwhere(databitmap == 33)
+            active_indeces = np.vstack([active_indeces, quiet_indeces])
+        correction = np.full_like(active_indeces, [ref1, ref2])
+        active_onmap = active_indeces + correction
+        for xindex, yindex in active_onmap:
+            B = dataMap[xindex, yindex]
+            x, y = -d_pixel * (xindex - centerX), -d_pixel * (yindex - centerY)
+            points.append(xyR2xyz(x, y, r_sun))
+            values.append(B)
+    return np.array(values), np.array(points)
+
+
 def download_map_and_harp(timestart, timeend):
-    series_M = 'hmi.M_720s'
-    series_bitmap = 'hmi.Mharp_720s'
-    res_bitmap = Fido.search(a.Time(timestart, timeend),
-                             a.jsoc.Series(series_M),
-                             a.jsoc.Notify('rrzhdanov@edu.hse.ru'))
+    series_M = "hmi.M_720s"
+    series_bitmap = "hmi.Mharp_720s"
+    res_bitmap = Fido.search(
+        a.Time(timestart, timeend),
+        a.jsoc.Series(series_M),
+        a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+    )
 
     downloaded_magnetogram = Fido.fetch(res_bitmap).data
 
-    res_M = Fido.search(a.Time(timestart, timeend),
-                        a.jsoc.Series(series_bitmap),
-                        a.jsoc.Segment('bitmap'),
-                        a.jsoc.Notify('rrzhdanov@edu.hse.ru'))
+    res_M = Fido.search(
+        a.Time(timestart, timeend),
+        a.jsoc.Series(series_bitmap),
+        a.jsoc.Segment("bitmap"),
+        a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+    )
     downloaded_bitmaps = Fido.fetch(res_M).data
     return downloaded_magnetogram, downloaded_bitmaps
 
 
-def compute_harp_MEnergy(timestart, timeend, onlyactive=True, mu=1.25e-6):
+def compute_harp_MEnergy(
+    timestart,
+    timeend,
+    onlyactive=True,
+    mu=1.25e-6,
+    downloaded=False,
+    magnetogram=None,
+    bitmaps=None,
+):
+    def get_area(xind: int, yind: int):
+        def get_vector(ind1, ind2):
+            start = time.process_time()
+            MAPMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
+            hmitime = time.process_time()
+            print(f"HMIMAP {hmitime-start:.2}")
+            point = MAPMAP.pixel_to_world(
+                u.Quantity(ind1, unit="pix"), u.Quantity(ind2, unit="pix")
+            )
+            pixtime = time.process_time()
+            print(f"pixtime {pixtime-start:.2}")
+            vector = np.array(
+                [
+                    point.heliocentric.x.value,
+                    point.heliocentric.y.value,
+                    point.heliocentric.z.value,
+                ]
+            )
+            return vector
+
+        vectorA = get_vector(xind - 1, yind + 1)
+        vectorB = get_vector(xind + 1, yind + 1)
+        vectorC = get_vector(xind + 1, yind - 1)
+        vectorD = get_vector(xind - 1, yind - 1)
+
+        sideAB = np.linalg.norm(vectorA - vectorB)
+        sideBC = np.linalg.norm(vectorB - vectorC)
+        sideCD = np.linalg.norm(vectorC - vectorD)
+        sideDA = np.linalg.norm(vectorD - vectorA)
+
+        diagAC = np.linalg.norm(vectorA - vectorC)
+        diagBD = np.linalg.norm(vectorB - vectorD)
+
+        area = 0.25 * np.sqrt(
+            4 * diagAC**2 * diagBD**2
+            - (sideAB**2 + sideCD**2 - sideBC**2 - sideDA**2) ** 2
+        )
+        return area
+
     def energy_onetime(dataMap, bitmaps):
         harps_count = len(bitmaps)
         energy_array = np.zeros(harps_count)
@@ -106,32 +212,53 @@ def compute_harp_MEnergy(timestart, timeend, onlyactive=True, mu=1.25e-6):
             bitmap = fits.open(bitmap_path)
 
             databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
-            size1, size2 = hdrbitmap['CRSIZE1'], hdrbitmap['CRSIZE2']
-            ref1, ref2 = hdrbitmap['CRPIX1'], hdrbitmap['CRPIX2']
+            size1, size2 = hdrbitmap["CRSIZE1"], hdrbitmap["CRSIZE2"]
+            ref1, ref2 = hdrbitmap["CRPIX1"], hdrbitmap["CRPIX2"]
             active_indeces = np.argwhere(databitmap == 34)
             if onlyactive is False:
                 quiet_indeces = np.argwhere(databitmap == 33)
                 active_indeces = np.vstack([active_indeces, quiet_indeces])
             correction = np.full_like(active_indeces, [ref1, ref2])
             active_onmap = active_indeces + correction
-            for (xindex, yindex) in active_onmap:
+            for xindex, yindex in active_onmap:
                 B = dataMap[xindex, yindex]
-                energy_piece = B**2 / (2*mu)
-                energy_harp = + energy_piece
+                energy_piece = B**2 / (2 * mu)
+                area = area_simple(xindex - centerX, yindex - centerY)
+                energy_harp = +energy_piece * area
             energy_array[i] = energy_harp
             bitmap.close()
         return energy_array
 
-    magnetogram, bitmaps = download_map_and_harp(timestart, timeend)
+    def area_simple(xindex, yindex):
+        tic = time.perf_counter()
+        tan_dif = np.arctan2(yindex + 1, xindex + 1) - \
+            np.arctan2(yindex, xindex)
+        sqr1 = np.sqrt(1 - d_r_ratio * (xindex**2 + yindex**2))
+        sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
+        toc = time.perf_counter()
+        area = np.abs(tan_dif * (sqr1 - sqr2) * r_sun**2)
+        # print(f'{toc-tic:.4} sec, {area}')
+        return area
+
+    if downloaded is False:
+        magnetogram, bitmaps = download_map_and_harp(timestart, timeend)
+    magnetogram = np.asarray(magnetogram)
     MAP = fits.open(magnetogram[0])
     dataMap, hdrMap = MAP[1].data, MAP[1].header
+    pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
+    d_pixel = np.mean([pxsizeX, pxsizeY])
+    dOBS = hdrMap["DSUN_OBS"]
+
+    r_sun = hdrMap["RSUN_REF"]
+    d_r_ratio = (arcsecs_to_radian(d_pixel) * dOBS / r_sun) ** 2
+    centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
 
     return energy_onetime(dataMap, bitmaps)
 
 
-series = 'hmi.Mharp_720s'
+series = "hmi.M_720s"
 # Create DRMS JSON client, use debug=True to see the query URLs
-client = drms.Client(email='rrzhdanov@edu.hse.ru')
+client = drms.Client(email="rrzhdanov@edu.hse.ru")
 
 
 """
@@ -175,7 +302,7 @@ print(downloaded_files)
 Map = fits.open(
     r"C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9862.20230808_001200_TAI.bitmap.fits")
 data = Map[-1].data
-#plt.imshow(data, cmap='inferno')
+# plt.imshow(data, cmap='inferno')
 hdr = Map[-1].header
 kwords = list(hdr.keys())
 print(hdr['CRPIX1'], hdr['CRPIX2'])
@@ -195,8 +322,55 @@ hmimap = sunpy.map.sources.HMIMap(data, hdr)
 
 
 plt.imshow(data)
-"""
+energys = np.zeros_like(dates, dtype=np.float64)
+for i, date in enumerate(dates):
+    energys[i] = np.sum(
+        compute_harp_MEnergy(date, date, onlyactive=True, downloaded=False)
+    )
+np.savetxt("energys3.txt", energys)
 
-en_list = compute_harp_MEnergy('2023-08-08T00:14:00',
-                               '2023-08-08T00:14:00', onlyactive=True)
-# Map = fits.open( 'C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9862.20230808_002400_TAI.bitmap.fits')
+
+energys = np.loadtxt("energys3.txt")
+fig, ax = config(logscaley=True)
+ax.plot(energys, "o")
+"""
+if __name__ == "__main__":
+
+    magnetogram = [
+        "C:/Users/cosbo/sunpy/data/hmi.m_720s.20230808_001200_TAI.3.magnetogram.fits"
+    ]
+    bitmaps = [
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9915.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9914.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9913.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9911.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9909.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9907.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9905.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9904.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9902.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9900.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9899.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9893.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9892.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9890.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9882.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9879.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9875.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9872.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9864.20230808_001200_TAI.bitmap.fits",
+        "C:/Users/cosbo/sunpy/data/hmi.mharp_720s.9862.20230808_001200_TAI.bitmap.fits",
+    ]
+    # en_list = compute_harp_MEnergy('2023-08-08T00:14:00',
+    #                               '2023-08-08T00:14:00', onlyactive=False,
+    #                               downloaded=True, magnetogram=magnetogram,
+    #                               bitmaps=bitmaps)
+    dates = [
+        "2023-08-08T00:12:00"
+    ]
+    B, points = bitmaps_to_points(dates, downloaded=True,
+                                  magnetogram=magnetogram, bitmaps=bitmaps)
+    r = coordinates(700000*1000, 60, 30, latlon=True)
+    print(B_comp(r, B, points))
+    # dates = pd.date_range(start="2023-08-08 00:12:00",
+    #                      freq="60T", periods=8).values

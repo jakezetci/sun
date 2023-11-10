@@ -15,9 +15,9 @@ def ll2pt(lat, lon):
 
     """
     if lon >= 0:
-        return math.radians(lon), math.radians(90-lat)
+        return math.radians(lon), math.radians(90 - lat)
     else:
-        return math.radians(360+lon), math.radians(90-lat)
+        return math.radians(360 + lon), math.radians(90 - lat)
 
 
 def pt2ll(phi, theta):
@@ -26,15 +26,15 @@ def pt2ll(phi, theta):
 
     """
     if phi <= math.pi:
-        return math.degrees(math.pi/2 - theta), math.degrees(phi)
+        return math.degrees(math.pi / 2 - theta), math.degrees(phi)
     else:
-        return math.degrees(math.pi/2 - theta), math.degrees(phi - 2*math.pi)
+        return math.degrees(math.pi / 2 - theta), math.degrees(phi - 2 * math.pi)
 
 
 def xyz2ll(x, y, z):
     r = math.sqrt(x**2 + y**2 + z**2)
-    theta = math.acos(z/r)
-    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
+    theta = math.acos(z / r)
+    phi = math.copysign(1, y) * math.acos(x / math.sqrt(x**2 + y**2))
     return r, pt2ll(phi, theta)
 
 
@@ -52,8 +52,8 @@ def ll2xyz(lat, lon, r):
 
 def xyz2pt(x, y, z):
     r = math.sqrt(x**2 + y**2 + z**2)
-    theta = math.acos(z/r)
-    phi = math.copysign(1, y)*math.acos(x/math.sqrt(x**2 + y**2))
+    theta = math.acos(z / r)
+    phi = math.copysign(1, y) * math.acos(x / math.sqrt(x**2 + y**2))
     return r, phi, theta
 
 
@@ -62,9 +62,17 @@ def xyz2truexyz(x, y, z):
 
 
 def xy2ll(x, y, r=696340):
-    theta = math.acos(y/r)
-    phi = math.asin(x/(r*math.sin(theta)))
+    theta = math.acos(y / r)
+    phi = math.asin(x / (r * math.sin(theta)))
     return pt2ll(phi, theta)
+
+
+def xyR2xyz(x, y, R):
+    """
+    ну это гениальная функция
+    """
+    z = R**2 - x**2 - y**2
+    return x, y, z
 
 
 class coordinates:
@@ -88,7 +96,7 @@ class coordinates:
         if math.cos(self.theta) == 1:
             r = 0
         else:
-            r = math.sin(self.theta)/(1 - math.cos(self.theta))
+            r = math.sin(self.theta) / (1 - math.cos(self.theta))
         return np.array([r * math.cos(self.phi), r * math.sin(self.phi)])
 
 
