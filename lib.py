@@ -9,6 +9,7 @@ import math
 import pandas as pd
 from dataclasses import dataclass
 from coordinates import coordinates
+
 try:
     import cPickle as pickle
 except ModuleNotFoundError:
@@ -17,7 +18,25 @@ from field import dipolebetter
 
 
 def distance_sphere(a, b, R):
+    """
 
+    Parameters
+    ----------
+    a
+        [lat, lon]
+    b
+        [lat, lon]
+    R
+        radius of sphere
+
+    Returns
+    -------
+        distance
+
+    Raises
+    ------
+    ValueError
+    """
     lat1, lon1 = a
     lat2, lon2 = b
     phi_1 = math.radians(lat1)
@@ -25,123 +44,171 @@ def distance_sphere(a, b, R):
 
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
-    d = math.sin(delta_phi / 2.0) ** 2 + (math.cos(phi_1) * math.cos(phi_2)
-                                          * math.sin(delta_lambda / 2.0) ** 2)
+    d = math.sin(delta_phi / 2.0) ** 2 + (
+        math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
+    )
     try:
         c = 2 * math.atan2(math.sqrt(d), math.sqrt(1 - d))
     except ValueError:
-        print(f'd={d}')
-        print(f'a, b = {a, b}')
+        print(f"d={d}")
+        print(f"a, b = {a, b}")
         raise ValueError
-    km = R * c
-    return km
+    m = R * c
+    return m
 
 
-def find_nearest(array, point, R=696340):
+def find_nearest(array, point, R=696340 * 1e3):
     array = list(map(list, array))
-    dist_arr = np.asarray([np.abs(distance_sphere(
-        a, point, R)) for a in array])
+    dist_arr = np.asarray([np.abs(distance_sphere(a, point, R)) for a in array])
     idx = dist_arr.argmin()
     return array[idx], idx
 
-# from here on now axis Z refers to the line of sight
-# line of sight is meant to be lined up with the centre of the Sun, (0,0)
-# so far we assume that sun isn't moving so line of sight is at (0,0)
 
+def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
+    """
+    Computes Green`s function based on Sadykov-Zimovets work
 
-def I1(r1, r2):
-    x, y, z = r1 - r2  # разница векторов
-    return z/((x**2 + y**2)*np.linalg.norm(r1-r2))
+    Parameters
+    ----------
+    r1 : coordinates or np.array
+        point 1 (where the field is computed)
+    r2 : coordinates or np.array
+        point 2 (point on a grid)
+    a : float, optional
+        sun radius. The default is 696340 * 1000.
+    vector_method : Bool, optional
+        Either using vector method of not,
+            details in the work. The default is False.
 
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
 
-def I2(r1, r2):
-    x, y, z = r1 - r2  # разница векторов
-    num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
-    den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
-    return num/den
+    """
 
+    def I1(r1, r2):
+        x, y, z = r1 - r2  # разница векторов
+        return z / ((x**2 + y**2) * np.linalg.norm(r1 - r2))
 
-def I3(r1, r2):
+    def I2(r1, r2):
+        x, y, z = r1 - r2  # разница векторов
+        num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
+        den = 3 * (x**2 + y**2) ** 2 * (np.linalg.norm(r1 - r2)) ** 3
+        return num / den
+
+    def I3(r1, r2):
+        x, y, z = r1 - r2
+        x1, y1, z1 = r1
+        x2, y2, z2 = r2
+        num = (
+            (-2 * ((x**2 + y**2) ** 2) * z2)
+            + ((x**2 + y**2) * (z**3 + 3 * (z2**2) * z))
+            - 2 * (z2**2) * (-z) ** 3
+        )
+        den = 3 * (x**2 + y**2) ** 2 * (np.linalg.norm(r1 - r2)) ** 3
+        return num / den
+
+    def lI1(r1, r2):
+        x, y, z = r1 - r2
+        return 1 / (x**2 + y**2)
+
+    def lI2(r1, r2):
+        x, y, z = r1 - r2
+        return 2 / (3 * (x**2 + y**2) ** 2)
+
+    def lI3(r1, r2):
+        x, y, z = r1 - r2
+        x1, y1, z1 = r1
+        x2, y2, z2 = r2
+        return (x**2 + y**2 + 2 * (z2**2)) / (3 * (x**2 + y**2) ** 2)
+
+    def IlI1(r1, r2):
+        num = -1
+        R = np.asarray(r1 - r2)
+        r = np.linalg.norm(R)
+        L = np.array([0, 0, 1])
+        den = (r + np.dot(L, R)) * r
+        return num / den
+
+    def IlI2(r1, r2):
+        R = np.asarray(r1 - r2)
+        r = np.linalg.norm(R)
+        L = np.array([0, 0, 1])
+        d1 = -2 / ((3 * r * (r - np.dot(L, R)) * (r + np.dot(L, R)) ** 2))
+        d2 = np.dot(L, R) / (3 * (r**2 - np.dot(L, R) ** 2) * r**3)
+        return d1 + d2
+
+    def IlI3(r1, r2):
+        R = np.asarray(r1 - r2)
+        r = np.linalg.norm(R)
+        L = np.array([0, 0, 1])
+        d1 = -(np.dot(L, R) ** 2 + np.dot(L, R) * r + r**2) / (
+            3 * (r + np.dot(L, R)) * r**3
+        )
+        d2 = -2 * np.dot(L, r2) / (3 * r**3)
+        d3n = -(
+            np.dot(L, r2) ** 2
+            * (2 * r**3 - 3 * np.dot(L, R) * r**2 + np.dot(L, R) ** 3)
+        )
+        d3d = 3 * r**3 * (r**2 - np.dot(L, R) ** 2) ** 2
+        d3 = d3n / d3d
+        return d1 + d2 + d3
+
+    if type(r1) == coordinates:
+        r1 = r1.vector
+    if type(r2) == coordinates:
+        r2.vector
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
-    num = (-2*((x**2+y**2)**2) * z2)+((x**2+y**2) *
-                                      (z**3 + 3*(z2**2)*z)) - 2*(z2**2)*(-z)**3
-    den = 3 * (x**2 + y**2)**2 * (np.linalg.norm(r1-r2))**3
-    return num/den
-
-
-def lI1(r1, r2):
-    x, y, z = r1 - r2
-    return 1/(x**2 + y**2)
-
-
-def lI2(r1, r2):
-    x, y, z = r1 - r2
-    return 2/(3 * (x**2 + y**2)**2)
-
-
-def lI3(r1, r2):
-    x, y, z = r1 - r2
-    x1, y1, z1 = r1
-    x2, y2, z2 = r2
-    return (x**2 + y**2 + 2*(z2**2))/(3 * (x**2 + y**2)**2)
-
-
-def IlI1(r1, r2):
-    num = -1
-    R = np.asarray(r1 - r2)
-    r = np.linalg.norm(R)
-    L = np.array([0, 0, 1])
-    den = (r + np.dot(L, R))*r
-    return num / den
-
-
-def IlI2(r1, r2):
-    R = np.asarray(r1 - r2)
-    r = np.linalg.norm(R)
-    L = np.array([0, 0, 1])
-    d1 = -2/((3*r*(r-np.dot(L, R)) * (r+np.dot(L, R))**2))
-    d2 = np.dot(L, R) / (3*(r**2 - np.dot(L, R)**2)*r**3)
-    return d1+d2
-
-
-def IlI3(r1, r2):
-    R = np.asarray(r1 - r2)
-    r = np.linalg.norm(R)
-    L = np.array([0, 0, 1])
-    d1 = -(np.dot(L, R)**2 + np.dot(L, R)*r + r**2)/(3*(r+np.dot(L, R)) * r**3)
-    d2 = -2*np.dot(L, r2)/(3*r**3)
-    d3n = -(np.dot(L, r2)**2*(2*r**3 - 3*np.dot(L, R)*r**2 + np.dot(L, R)**3))
-    d3d = 3*r**3 * (r**2 - np.dot(L, R)**2)**2
-    d3 = d3n/d3d
-    return d1+d2+d3
-
-
-def GreenBl(r1, r2, a=696340, method=False):
-    r1, r2 = r1.vector, r2.vector
-    x, y, z = r1 - r2
-    x1, y1, z1 = r1
-    x2, y2, z2 = r2
-    if method is True:
+    if vector_method is True:
         ili1 = IlI1(r1, r2)
         ili2 = IlI2(r1, r2)
         ili3 = IlI3(r1, r2)
-        G1 = 2 * x1 * ili1 - 3*x*((x1**2 + y1**2 - a**2)*ili2+ili3)
-        G2 = 2 * y1 * ili1 - 3*y*((x1**2 + y1**2 - a**2)*ili2+ili3)
-        G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
+        G1 = 2 * x1 * ili1 - 3 * x * ((x1**2 + y1**2 - a**2) * ili2 + ili3)
+        G2 = 2 * y1 * ili1 - 3 * y * ((x1**2 + y1**2 - a**2) * ili2 + ili3)
+        G3 = (np.linalg.norm(r1) ** 2 - a**2) / (np.linalg.norm(r1 - r2) ** 3)
     else:
         i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
         li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
-        G1 = 2*x1*(i1-li1) - 3*x*((x1**2 + y1**2 - a**2)*(i2-li2)+(i3-li3))
-        G2 = 2*y1*(i1-li1) - 3*y*((x1**2 + y1**2 - a**2)*(i2-li2)+(i3-li3))
-        G3 = (np.linalg.norm(r1)**2 - a**2) / (np.linalg.norm(r1-r2)**3)
-    return np.array([G1, G2, G3])/(4*np.pi*a)
+        G1 = 2 * x1 * (i1 - li1) - 3 * x * (
+            (x1**2 + y1**2 - a**2) * (i2 - li2) + (i3 - li3)
+        )
+        G2 = 2 * y1 * (i1 - li1) - 3 * y * (
+            (x1**2 + y1**2 - a**2) * (i2 - li2) + (i3 - li3)
+        )
+        G3 = (np.linalg.norm(r1) ** 2 - a**2) / (np.linalg.norm(r1 - r2) ** 3)
+    return np.array([G1, G2, G3]) / (4 * np.pi * a)
 
 
-def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=False):
+def B_comp(r, values: np.array, points: np.array):
+    """
+    computes
 
-    def B_comp_same_maps(r, B_map, heavy=True, change=True):
+    Parameters
+    ----------
+    r : coordinates or np.array
+        point, where the field is computed
+    values : np.array
+    points : np.array
+        points used to integrate the field
+
+    Returns
+    -------
+    B : np.array
+        magnetic field density in vector form
+
+    """
+    B = np.asarray([0.0, 0.0, 0.0], dtype=np.float64)
+    for value, point in zip(values, points):
+        add = value * np.asarray(GreenBl(r, point))
+        B = B + add
+    return B
+
+
+def B_comp_map(r, B_map, method="allmap", grid=False, debug=False, change=False):
+    def B_comp_map_same_maps(r, B_map, heavy=True, change=True):
         """
         быстрое вычисление B в случае, когда
         сетка с числам совпадает с сеткой интегрирования
@@ -150,7 +217,7 @@ def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=False):
             B_map (Grid): DESCRIPTION.
 
         Returns:
-            B_comp(np.array, 3d)
+            B_comp_map(np.array, 3d)
 
         """
         B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
@@ -159,7 +226,6 @@ def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=False):
         debugging_obj = []
         if heavy:
             for i in range(n):
-
                 lat, lon = B_map.latlon[i]
                 r_2 = coordinates(R, lat, lon, latlon=True)
                 B_l = B_map.find_value(lat, lon, index=i)
@@ -180,7 +246,7 @@ def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=False):
         else:
             return B
 
-    def B_comp_diff_maps(r, grid, B_map):
+    def B_comp_map_diff_maps(r, grid, B_map):
         """
         r класса coordinates
         """
@@ -195,14 +261,14 @@ def B_comp(r, B_map, method='allmap', grid=False, debug=False, change=False):
             B = B + add
         return B
 
-    if method == 'allmap':
-        return B_comp_same_maps(r, B_map, change=change)
-    elif method == 'diffmaps':
-        return B_comp_diff_maps(r, grid, B_map)
+    if method == "allmap":
+        return B_comp_map_same_maps(r, B_map, change=change)
+    elif method == "diffmaps":
+        return B_comp_map_diff_maps(r, grid, B_map)
 
 
 class cell:
-    def __init__(self, center, hs, sizeType='deg'):
+    def __init__(self, center, hs, sizeType="deg"):
         self.center = center
         self.leftborder, self.rightborder = center.lon - hs, center.lon + hs
         # we pretend that cells are small enough to be considered plane
@@ -227,10 +293,16 @@ class B_class:
 
 @dataclass
 class Grid:
-    def __init__(self, r, latitudes, longitudes, hs=False, area=False,
-                 uniformgrid=True):
+    """
+    a class keeps a bunch of values with their coordinates,
+    works best with same-radius grid and equally spread latitudes-longitudes
+    """
+
+    def __init__(
+        self, r, latitudes, longitudes, hs=False, area=False, uniformgrid=True
+    ):
         if latitudes.size != longitudes.size:
-            raise ValueError('longitudes size does not match latitudes')
+            raise ValueError("longitudes size does not match latitudes")
         self.num = np.size(latitudes)
         self.values = np.zeros_like(latitudes)
         self.valuesvector = np.zeros((self.num, 3))
@@ -251,23 +323,28 @@ class Grid:
                 center = coordinates(r, lat, lon, latlon=True)
                 self.cells.append(cell(center, size))
         elif hs is not False:
-            h = hs/2
-            self.area = self.r**2*np.abs((np.cos(np.radians(90-self.lat)+h) -
-                                          np.cos(np.radians(90-self.lat)-h))
-                                         * hs)
+            h = hs / 2
+            self.area = self.r**2 * np.abs(
+                (
+                    np.cos(np.radians(90 - self.lat) + h)
+                    - np.cos(np.radians(90 - self.lat) - h)
+                )
+                * hs
+            )
         elif area is not False:
             self.area = area
 
-        self.coors_set = [coordinates(self.r, *ll, latlon=True)
-                          for ll in self.latlon]
+        self.coors_set = [coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
         self.progress = 0
 
-    def set_value(self, value, lat, lon, vector=False, easy=True, index=False):
+    def set_value(self, value: float, lat=None, lon=None, vector=False, easy=True, index=False):
         if index is not False:
             if vector:
                 self.valuesvector[index] = value
             else:
                 self.values[index] = value
+        elif lat is None:
+            raise ValueError
         elif easy is True:
             self.set_value_easy(value, lat, lon, vector=vector)
         else:
@@ -278,8 +355,7 @@ class Grid:
                 self.values[i] = value
 
     def set_value_easy(self, value, lat, lon, vector=False):
-        i = np.where(((np.array(self.latlon)
-                       == [lat, lon]).all(1)))
+        i = np.where(((np.array(self.latlon) == [lat, lon]).all(1)))
         if vector:
             self.valuesvector[i] = value
         else:
@@ -301,62 +377,105 @@ class Grid:
             return self.values[ind]
 
     def find_value_easy(self, lat, lon):
-        ind = np.where(((np.array(self.latlon)
-                         == [lat, lon]).all(1)))
+        ind = np.where(((np.array(self.latlon) == [lat, lon]).all(1)))
         return self.values[ind]
 
-    def save_pkl(self, name=False, empty=None, vector=None):
-        if empty is None:
-            if self.progress == 0:
-                empty = True
-            else:
-                empty = False
+    def save_pkl(self, name=False):
+        """
+        saves the Grid to a .pkl file
+
+        Parameters
+        ----------
+        name : str, optional
+            name of the file, by default False
+        """
+        if self.progress == 0:
+            empty = True
+        else:
+            empty = False
 
         if empty is True:
-            folder = 'emptymaps'
+            folder = "emptymaps"
         else:
-            if vector is True:
-                folder = 'vectormaps'
-            elif vector is False:
-                folder = 'Lmaps'
-            elif np.count_nonzero(self.values) == 0:
-                folder = 'vectormaps'
+            if np.count_nonzero(self.values) == 0:
+                folder = "vectormaps"
             else:
-                folder = 'Lmaps'
+                folder = "Lmaps"
 
         if name is False:
-            name = f'B_map {self.r:.2}'
-        with open(f'{folder}/{name}.pkl',
-                  'wb') as outp:
+            name = f"B_map {self.r:.2}"
+        with open(f"{folder}/{name}.pkl", "wb") as outp:
             pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
 
     def dataframe(self):
-        d = {'latlon': self.latlon, 'lat': self.lat, 'lon': self.lon,
-             'r': np.full_like(self.lat, self.r),
-             'xyz': [cs.vector for cs in self.coors_set], 'area': self.area,
-             'values': self.values, 'valuesvector': self.valuesvector}
+        """
+        Creates a pandas.DataFrame of the Grid
+
+        Returns
+        -------
+            pandas.DataFrame
+        """
+        d = {
+            "latlon": self.latlon,
+            "lat": self.lat,
+            "lon": self.lon,
+            "r": np.full_like(self.lat, self.r),
+            "xyz": [cs.vector for cs in self.coors_set],
+            "area": self.area,
+            "values": self.values,
+            "valuesvector": self.valuesvector,
+        }
         return pd.DataFrame(data=d)
 
     def save_csv(self, name=False):
+        """
+        saves the Grid to a .csv file
+
+        Parameters
+        ----------
+        name, optional
+            name of the file, by default False
+        """
         if name is False:
-            name = f'B_map {self.r:.2}'
+            name = f"B_map {self.r:.2}"
         df = self.dataframe(self)
-        df.to_csv(f'{name}.csv', index=True)
+        df.to_csv(f"csv/{name}.csv", index=True)
 
     def progress1(self):
+        """
+        manually adds 1 to the progress counter
+        """
         self.progress = self.progress + 1
 
     def progress_brute(self):
-        self.progress = int(max([np.count_nonzero(self.values),
-                                 np.count_nonzero(self.valuesvector)/3]))
+        """
+        overrides whatever progress is saved based on the amount of values stored
+        """
+        self.progress = int(
+            max(
+                [np.count_nonzero(self.values), np.count_nonzero(self.valuesvector) / 3]
+            )
+        )
 
     def add_fieldinfo(self, m, dipolepos):
+        """
+        adds information about the field parameters
+
+        Parameters
+        ----------
+        m
+            dipole moment
+        dipolepos
+            position of a dipole
+        """
         self.m = m
         self.dipolepos = dipolepos
 
     def change_coors(self):
-        self.coors_set = [coordinates(self.r, *ll, latlon=True)
-                          for ll in self.latlon]
+        """
+        manually change coordinates (made for compatability reasons)
+        """
+        self.coors_set = [coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
 
 
 class grid(Grid):
@@ -372,7 +491,7 @@ def load_grid(df):
     return grid
 
 
-def create_grid(latlim, lonlim, N, r=696340, name=False):
+def create_grid(latlim, lonlim, N, r=696340 * 1000, name=False):
     # N - количество ячеек на градус
     n = int((latlim[1] - latlim[0]) * N)
     m = int((lonlim[1] - lonlim[0]) * N)
@@ -402,10 +521,10 @@ class Magneticline:
     def add_value(self, m, dipolepos=[0, 0, 0], stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
-            self.points[-1].vector)
+            self.points[-1].vector
+        )
         new_point = coordinates(*new_point)
-        self.values.append(dipolebetter(
-            new_point, m, dipolepos, returnxyz=True))
+        self.values.append(dipolebetter(new_point, m, dipolepos, returnxyz=True))
         self.points.append(new_point)
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
@@ -413,16 +532,17 @@ class Magneticline:
     def add_value_comp(self, B_map, stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
-            self.points[-1].vector)
+            self.points[-1].vector
+        )
         new_point = coordinates(*new_point)
-        val = B_comp(new_point, B_map)
+        val = B_comp_map(new_point, B_map)
         self.values.append(val)
         self.points.append(new_point)
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
     def line_by_length(self, func, length, *args):
-        for i in range(length//self.step):
+        for i in range(length // self.step):
             self.add_value(self, func, *args)
 
     def line_by_stoppoint(self, func, stoppoint, maxsteps=1e3, *args):
@@ -433,18 +553,17 @@ class Magneticline:
 
     def save_pkl(self, name=False):
         if name is False:
-            name = f'{self.initial_point.r:.2}-{self.initial_value:.2}'
-        with open(f'maglines/{name}.pkl',
-                  'wb') as outp:
+            name = f"{self.initial_point.r:.2}-{self.initial_value:.2}"
+        with open(f"maglines/{name}.pkl", "wb") as outp:
             pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
 
     def dataframe(self):
-        d = {'points': self.points, 'values': self.values}
+        d = {"points": self.points, "values": self.values}
         return pd.DataFrame(data=d)
 
     def save_csv(self, name=False):
         df = self.dataframe(self)
-        df.to_csv(f'{name}.csv')
+        df.to_csv(f"{name}.csv")
 
     def brute_progress(self):
         self.progress = len(self.points)
