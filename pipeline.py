@@ -16,12 +16,18 @@ import astropy.units as u
 import astropy.time
 import textwrap
 import sunpy.map.sources
-from coordinates import xyz2ll, xyR2xyz, coordinates
-from lib import Grid
+try:
+    # Trying to find module on sys.path
+    from coordinates import xyz2ll, xyR2xyz, coordinates
+    from lib import Grid, B_comp
+    from plots import config
+except ModuleNotFoundError:
+    from sun.coordinates import xyz2ll, xyR2xyz, coordinates
+    from sun.lib import Grid, B_comp
+    from sun.plots import config
 import time
-from plots import config
+
 import pandas as pd
-from lib import B_comp
 
 
 def arcsecs_to_radian(arcsecs):
