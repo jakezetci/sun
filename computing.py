@@ -25,12 +25,14 @@ except ModuleNotFoundError:
 
 import pickle
 
-with open('callid.txt') as f:
-    call_id = int(f.read())
+try:
+    with open('callid.txt') as f:
+        call_id = int(f.read())
 
-with open('TOKEN.txt') as ff:
-    API_TOKEN = ff.read()
-
+    with open('TOKEN.txt') as ff:
+        API_TOKEN = ff.read()
+except FileNotFoundError:
+    pass
 
 def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
     # N - количество ячеек на градус
