@@ -10,8 +10,11 @@ Created on Mon Oct 16 20:30:50 2023
 # It echoes any incoming text messages.
 
 import telebot
-import computing
-import pickle
+try:
+
+    import computing
+except ModuleNotFoundError:
+    import sun.computing
 from telebot.util import quick_markup
 
 bot = telebot.TeleBot('6559135670:AAHH8GpwVNX5k90FdFdWArasp9sc05fSLpI')

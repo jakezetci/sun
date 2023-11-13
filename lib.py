@@ -8,13 +8,16 @@ import numpy as np
 import math
 import pandas as pd
 from dataclasses import dataclass
-from coordinates import coordinates
+
 
 try:
     import cPickle as pickle
+    from coordinates import coordinates
+    from field import dipolebetter
 except ModuleNotFoundError:
     import pickle
-from field import dipolebetter
+    from sun.field import dipolebetter
+    from sun.coordinates import coordinates
 
 
 def distance_sphere(a, b, R):
@@ -337,7 +340,9 @@ class Grid:
         self.coors_set = [coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
         self.progress = 0
 
-    def set_value(self, value: float, lat=None, lon=None, vector=False, easy=True, index=False):
+    def set_value(
+        self, value: float, lat=None, lon=None, vector=False, easy=True, index=False
+    ):
         if index is not False:
             if vector:
                 self.valuesvector[index] = value

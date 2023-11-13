@@ -6,18 +6,22 @@ Created on Tue Sep 19 21:22:29 2023
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import math
-import mplstereonet
-from coordinates import coordinates
-from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
-from field import dipolebetter
-from plots import sphere, disk, plotmap
+
+
 import os
 import time
 import telebot
-import alertbot
+
+try:
+    from coordinates import coordinates
+    from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
+    from field import dipolebetter
+    from plots import sphere, disk, plotmap
+except ModuleNotFoundError:
+    from sun.coordinates import coordinates
+    from sun.lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
+    from sun.field import dipolebetter
+    from sun.plots import sphere, disk, plotmap
 
 import pickle
 
