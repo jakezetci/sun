@@ -17,7 +17,6 @@ import astropy.time
 import textwrap
 import sunpy.map.sources
 try:
-    # Trying to find module on sys.path
     from coordinates import xyz2ll, xyR2xyz, coordinates
     from lib import Grid, B_comp
     from plots import config
