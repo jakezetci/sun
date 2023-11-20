@@ -5,7 +5,7 @@ Created on Thu Aug 10 00:01:44 2023
 @author: Home-Pc
 """
 import numpy as np
-from coordinates import coordinates, ll2xyz
+from coordinates import Coordinates, ll2xyz
 from lib import B_comp_map, Grid, magneticline
 from field import B_dipole, dipolebetter
 import os

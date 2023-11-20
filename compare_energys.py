@@ -11,6 +11,7 @@ from plots import config
 import numpy as np
 import pandas as pd
 from computing import alert_bot
+
 """
 magnetogram = [
     "C:/Users/cosbo/sunpy/data/hmi.m_720s.20230808_001200_TAI.3.magnetogram.fits"
@@ -39,38 +40,46 @@ bitmaps = [
 ]
 """
 latlim = (-30, 30)
-lonlim = (-30,  30)
+lonlim = (-30, 30)
 N = 0.25
 
 
-dates = pd.date_range(start="2023-08-08 00:12:00",
-                      freq="6H", periods=4).values
+dates = pd.date_range(start="2023-08-08 00:12:00", freq="6H", periods=4).values
 energys_low = np.zeros(4)
 energys_high = np.zeros(4)
 for i, date in enumerate(dates):
     magnetogram, bitmaps = download_map_and_harp(date, date)
-    energy_low = np.sum(compute_harp_MEnergy(date, date, downloaded=True,
-                                             magnetogram=magnetogram,
-                                             bitmaps=bitmaps))
-    values, points = bitmaps_to_points(date, downloaded=True, magnetogram=magnetogram,
-                                       bitmaps=bitmaps)
+    energy_low = np.sum(
+        compute_harp_MEnergy(
+            date, date, downloaded=True, magnetogram=magnetogram, bitmaps=bitmaps
+        )
+    )
+    values, points = bitmaps_to_points(
+        date, downloaded=True, magnetogram=magnetogram, bitmaps=bitmaps
+    )
     grid_empty = create_grid(latlim, lonlim, N)
     ts = pd.to_datetime(str(date))
-    name = ts.strftime('%Y.%m.%d %I:%M%p')
-    grid_high = comp_grid_points(grid_empty, points, values,
-                                 checkpoints=15, timestamp=True,
-                                 alert=True, name=name)
+    name = ts.strftime("%Y.%m.%d %I:%M%p")
+    grid_high = comp_grid_points(
+        grid_empty,
+        points,
+        values,
+        checkpoints=15,
+        timestamp=True,
+        alert=True,
+        name=name,
+    )
     energy_high = compute_grid_energy(grid_high)
     energys_low[i] = energy_low
     energys_high[i] = energy_high
-np.savetxt('HIGH.txt', energys_high)
-np.savetxt('LOW.txt', energys_low)
+np.savetxt("HIGH.txt", energys_high)
+np.savetxt("LOW.txt", energys_low)
 fig, ax = config()
-ax.plot(dates, energys_low, 'o', label='low', color='pink')
-ax.plot(dates, energys_high, 'o', label='high', color='green')
-ax.legend(loc='best')
+ax.plot(dates, energys_low, "o", label="low", color="pink")
+ax.plot(dates, energys_high, "o", label="high", color="green")
+ax.legend(loc="best")
 
 if True:
     rand = np.random.randint(10, 99)
-    fig.savefig('energy.png')
-    alert_bot('вот картинка..', imagepath='energy.png')
+    fig.savefig("energy.png")
+    alert_bot("вот картинка..", imagepath="energy.png")

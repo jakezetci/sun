@@ -12,12 +12,12 @@ from dataclasses import dataclass
 
 try:
     import cPickle as pickle
-    from coordinates import coordinates
+    from coordinates import Coordinates
     from field import dipolebetter
 except ModuleNotFoundError:
     import pickle
     from sun.field import dipolebetter
-    from sun.coordinates import coordinates
+    from sun.coordinates import Coordinates
 
 
 def distance_sphere(a, b, R):
@@ -73,9 +73,9 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
 
     Parameters
     ----------
-    r1 : coordinates or np.array
+    r1 : Coordinates or np.array
         point 1 (where the field is computed)
-    r2 : coordinates or np.array
+    r2 : Coordinates or np.array
         point 2 (point on a grid)
     a : float, optional
         sun radius. The default is 696340 * 1000.
@@ -85,9 +85,7 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
-
+    GreenBl : float
     """
 
     def I1(r1, r2):
@@ -158,9 +156,9 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
         d3 = d3n / d3d
         return d1 + d2 + d3
 
-    if type(r1) == coordinates:
+    if type(r1) == Coordinates:
         r1 = r1.vector
-    if type(r2) == coordinates:
+    if type(r2) == Coordinates:
         r2.vector
     x, y, z = r1 - r2
     x1, y1, z1 = r1
@@ -191,7 +189,7 @@ def B_comp(r, values: np.array, points: np.array):
 
     Parameters
     ----------
-    r : coordinates or np.array
+    r : Coordinates or np.array
         point, where the field is computed
     values : np.array
     points : np.array
@@ -216,7 +214,7 @@ def B_comp_map(r, B_map, method="allmap", grid=False, debug=False, change=False)
         быстрое вычисление B в случае, когда
         сетка с числам совпадает с сеткой интегрирования
         Args:
-            r (coordinates): DESCRIPTION.
+            r (Coordinates): DESCRIPTION.
             B_map (Grid): DESCRIPTION.
 
         Returns:
@@ -230,7 +228,7 @@ def B_comp_map(r, B_map, method="allmap", grid=False, debug=False, change=False)
         if heavy:
             for i in range(n):
                 lat, lon = B_map.latlon[i]
-                r_2 = coordinates(R, lat, lon, latlon=True)
+                r_2 = Coordinates(R, lat, lon, latlon=True)
                 B_l = B_map.find_value(lat, lon, index=i)
                 add = B_l * np.asarray(GreenBl(r, r_2)) * B_map.area[i]
                 B = B + add
@@ -240,7 +238,7 @@ def B_comp_map(r, B_map, method="allmap", grid=False, debug=False, change=False)
         else:
             for coor, S in zip(B_map.latlon, B_map.area):
                 lat, lon = coor
-                r_2 = coordinates(R, lat, lon, latlon=True)
+                r_2 = Coordinates(R, lat, lon, latlon=True)
                 B_l = B_map.find_value_easy(lat, lon)
                 add = B_l * np.asarray(GreenBl(r, r_2)) * S
                 B = B + add
@@ -251,13 +249,13 @@ def B_comp_map(r, B_map, method="allmap", grid=False, debug=False, change=False)
 
     def B_comp_map_diff_maps(r, grid, B_map):
         """
-        r класса coordinates
+        r класса Coordinates
         """
         B = np.asarray([0.0, 0.0, 0.0], dtype=np.float32)
         R = grid.r
         for coor, S in zip(grid.latlon, grid.area):
             lat, lon = coor
-            r_2 = coordinates(R, lat, lon, latlon=True)
+            r_2 = Coordinates(R, lat, lon, latlon=True)
             B_l = B_map.find_value(lat, lon)
 
             add = B_l * np.asarray(GreenBl(r, r_2)) * S
@@ -297,7 +295,7 @@ class B_class:
 @dataclass
 class Grid:
     """
-    a class keeps a bunch of values with their coordinates,
+    a class keeps a bunch of values with their Coordinates,
     works best with same-radius grid and equally spread latitudes-longitudes
     """
 
@@ -323,7 +321,7 @@ class Grid:
             self.cells = []
             self.area = False
             for lat, lon, size in zip(latitudes, longitudes, hs):
-                center = coordinates(r, lat, lon, latlon=True)
+                center = Coordinates(r, lat, lon, latlon=True)
                 self.cells.append(cell(center, size))
         elif hs is not False:
             h = hs / 2
@@ -337,7 +335,7 @@ class Grid:
         elif area is not False:
             self.area = area
 
-        self.coors_set = [coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
+        self.coors_set = [Coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
         self.progress = 0
 
     def set_value(
@@ -480,7 +478,7 @@ class Grid:
         """
         manually change coordinates (made for compatability reasons)
         """
-        self.coors_set = [coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
+        self.coors_set = [Coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
 
 
 class grid(Grid):
@@ -528,7 +526,7 @@ class Magneticline:
         new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
             self.points[-1].vector
         )
-        new_point = coordinates(*new_point)
+        new_point = Coordinates(*new_point)
         self.values.append(dipolebetter(new_point, m, dipolepos, returnxyz=True))
         self.points.append(new_point)
         self.pointsxyz.append(new_point.vector)
@@ -539,7 +537,7 @@ class Magneticline:
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector
         )
-        new_point = coordinates(*new_point)
+        new_point = Coordinates(*new_point)
         val = B_comp_map(new_point, B_map)
         self.values.append(val)
         self.points.append(new_point)

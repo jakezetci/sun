@@ -6,16 +6,16 @@ Created on Tue Jul 25 15:58:55 2023
 """
 
 try:
-    from coordinates import coordinates
+    from coordinates import Coordinates
 except ModuleNotFoundError:
-    from sun.coordinates import coordinates
+    from sun.coordinates import Coordinates
 import math
 import numpy as np
 
 
 def B_dipole(r, B0=1000, R=696340 * 1e3, returnBl=True, returnxyz=False):
     """
-    r класса coordinates
+    r класса Coordinates
     """
     B_r = -2 * B0 * (R / r.r) ** 3 * math.cos(r.theta)
     B_theta = -B0 * (R / r.r) ** 3 * math.sin(r.theta)
@@ -43,9 +43,9 @@ def dipolebetter(
     mu=1.25e-6,
 ):
     """
-    r класса coordinates, m вектор (x, y, z) в системе садыкова
+    r класса Coordinates, m вектор (x, y, z) в системе садыкова
     """
-    r = coordinates(*(r.vector - rdipole))
+    r = Coordinates(*(r.vector - rdipole))
     c = mu / (4 * math.pi * r.r**5)
     m = np.asarray(dipolemoment)
     rm = np.inner(r.vector, m)

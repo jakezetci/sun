@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
-from coordinates import coordinates, ll2xyz, ll2pt, pt2xyz
+from coordinates import Coordinates, ll2xyz, ll2pt, pt2xyz
 from lib import B_comp_map, Grid, create_grid, Magneticline
 from field import dipolebetter
 from plots import sphere, disk, plotmap
@@ -24,7 +24,7 @@ phi, theta = ll2pt(60, 30)
 alerts = True
 
 m = np.asarray(ll2xyz(60, 30, 1)) * 1e5
-pos = coordinates(600000, dipolelat, dipolelon, latlon=True)
+pos = Coordinates(600000, dipolelat, dipolelon, latlon=True)
 pos = pos.vector
 relativelat1, relativelon1 = 6, 8
 relativelat, relativelon = -17, -15
@@ -38,7 +38,7 @@ Lmap = model_grid(empty_grid, dipole=m, dipolepos=pos,
 
 print('Lmapdone')
 
-perfect_point = coordinates(
+perfect_point = Coordinates(
     696340+100, dipolelat+relativelat1, dipolelon+relativelon1, latlon=True)
 in_value = dipolebetter(perfect_point, dipolemoment=m,
                         rdipole=pos, returnxyz=True)

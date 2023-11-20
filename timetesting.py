@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
-from coordinates import coordinates, ll2xyz
+from coordinates import Coordinates, ll2xyz
 from lib import B_comp_map, Grid, create_grid
 from field import dipolebetter
 from plots import sphere, subplots, config
@@ -53,10 +53,10 @@ def test_dipolelatlon(
             tic = time.perf_counter()
         dipolelat, dipolelon = L[i]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid(
             [r_point.lat + latlim[0], r_point.lat + latlim[1]],
             [r_point.lon + lonlim[0], r_point.lon + lonlim[1]],
@@ -165,10 +165,10 @@ def test_pointlatlon(
             tic = time.perf_counter()
         Rrelative = np.array([rRelative, *L[i]])
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid(
             [r_point.lat + latlim[0], r_point.lat + latlim[1]],
             [r_point.lon + lonlim[0], r_point.lon + lonlim[1]],
@@ -266,10 +266,10 @@ def test_borders(
         sz = size_array[i]
         latlim, lonlim = [-sz, +sz], [-sz, sz]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid(
             [r_point.lat + latlim[0], r_point.lat + latlim[1]],
             [r_point.lon + lonlim[0], r_point.lon + lonlim[1]],
@@ -352,10 +352,10 @@ def test_density(
             tic = time.perf_counter()
         NN = N_array[i]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid(
             [r_point.lat + latlim[0], r_point.lat + latlim[1]],
             [r_point.lon + lonlim[0], r_point.lon + lonlim[1]],

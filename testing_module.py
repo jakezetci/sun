@@ -7,16 +7,11 @@ Created on Tue Oct  3 14:37:25 2023
 
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import math
-from coordinates import coordinates, ll2xyz
+from coordinates import Coordinates, ll2xyz
 from lib import B_comp_map, Grid, create_grid
 from field import dipolebetter
-from plots import sphere, subplots, config, plotmap
-from computing import model_grid, model_magneticline, comp_magneticline, comp_grid
-import pickle
-import copy
+from plots import subplots, config, plotmap
+from computing import model_grid
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.metrics import mean_absolute_percentage_error as mape
 import time
@@ -45,10 +40,10 @@ def test_dipolelatlon(lattest, lontest, iters=10, dipoleR=600000,
             tic = time.perf_counter()
         dipolelat, dipolelon = L[i]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid([r_point.lat+latlim[0], r_point.lat+latlim[1]],
                            [r_point.lon+lonlim[0], r_point.lon+lonlim[1]],
                            N=N)
@@ -127,10 +122,10 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
             tic = time.perf_counter()
         Rrelative = np.array([rRelative, *L[i]])
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid([r_point.lat+latlim[0], r_point.lat+latlim[1]],
                            [r_point.lon+lonlim[0], r_point.lon+lonlim[1]],
                            N=N)
@@ -199,10 +194,10 @@ def test_borders(sizelims, iters=100, dipoleR=600000,
         sz = size_array[i]
         latlim, lonlim = [-sz, +sz], [-sz, sz]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid([r_point.lat+latlim[0], r_point.lat+latlim[1]],
                            [r_point.lon+lonlim[0], r_point.lon+lonlim[1]],
                            N=N)
@@ -254,10 +249,10 @@ def test_density(Nlims, iters=10, dipoleR=600000,
             tic = time.perf_counter()
         NN = N_array[i]
         mm = np.asarray(ll2xyz(dipolelat, dipolelon, 1)) * M
-        pos = coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
+        pos = Coordinates(dipoleR, dipolelat, dipolelon, latlon=True)
         pos = pos.vector
         r_point = np.array([696340, dipolelat, dipolelon]) + Rrelative
-        r_point = coordinates(*r_point, latlon=True)
+        r_point = Coordinates(*r_point, latlon=True)
         grid = create_grid([r_point.lat+latlim[0], r_point.lat+latlim[1]],
                            [r_point.lon+lonlim[0], r_point.lon+lonlim[1]],
                            N=NN)

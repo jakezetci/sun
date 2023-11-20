@@ -17,12 +17,11 @@ ax.gridlines()
 plt.show() """
 
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
-from coordinates import coordinates
+from coordinates import Coordinates
 from lib import B_comp_map, Grid, ll2xyz
 from field import dipolebetter
 from plots import sphere
@@ -36,11 +35,9 @@ except ModuleNotFoundError:
     import pickle
 
 
-
 m = np.asarray(ll2xyz(60, 30, 1)) * 1e8
-pos = coordinates(500000, 60, 30, latlon=True)
+pos = Coordinates(500000, 60, 30, latlon=True)
 
 
-
-with open('checkpoint1 testBIG.pkl', 'rb') as f:
+with open("checkpoint1 testBIG.pkl", "rb") as f:
     map1 = pickle.load(f)

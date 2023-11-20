@@ -13,26 +13,26 @@ import time
 import telebot
 
 try:
-    from coordinates import coordinates
+    from coordinates import Coordinates
     from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
     from field import dipolebetter
     from plots import sphere, disk, plotmap
 except ModuleNotFoundError:
-    from sun.coordinates import coordinates
+    from sun.coordinates import Coordinates
     from sun.lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
     from sun.field import dipolebetter
     from sun.plots import sphere, disk, plotmap
 
-import pickle
 
 try:
-    with open('callid.txt') as f:
+    with open("callid.txt") as f:
         call_id = int(f.read())
 
-    with open('TOKEN.txt') as ff:
+    with open("TOKEN.txt") as ff:
         API_TOKEN = ff.read()
 except FileNotFoundError:
     pass
+
 
 def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
     # N - количество ячеек на градус
@@ -51,10 +51,7 @@ def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
     return B_mapempty
 
 
-def alert_bot(
-    status_message,
-    imagepath=False
-):
+def alert_bot(status_message, imagepath=False):
     bot = telebot.TeleBot(API_TOKEN)
     bot.send_message(call_id, status_message)
     if imagepath is not False:
@@ -113,7 +110,7 @@ def model_grid(
     r = B_map.r
     for i in range(B_map.progress, B_map.num):
         lat, lon = B_map.latlon[i]
-        r1 = coordinates(r, lat, lon, latlon=True)
+        r1 = Coordinates(r, lat, lon, latlon=True)
         B_map.set_value(
             dipolebetter(
                 r1,
@@ -177,8 +174,7 @@ def comp_grid(
             grid.save_pkl(name=f"checkpoint2 {name}")
         if timestamp:
             toc = time.perf_counter()
-            print(
-                f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds")
+            print(f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds")
             tic = time.perf_counter()
     grid.save_pkl(name=name)
     if alert is True:
@@ -205,8 +201,7 @@ def model_magneticline(
             magline.add_value(dipole, dipolepos)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(
-                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
             if magline.points[-1].r < stoppoint:
@@ -220,8 +215,7 @@ def model_magneticline(
             magline.add_value(dipole, dipolepos)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(
-                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
         return magline
@@ -261,8 +255,7 @@ def comp_magneticline(
             magline.add_value_comp(B_map)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(
-                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
         return magline
@@ -274,8 +267,7 @@ def comp_magneticline(
             magline.add_value_comp(B_map)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(
-                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
             if magline.points[-1].r < stoppoint:
@@ -313,8 +305,7 @@ def create_model_plotmap(
     ylabel="ylabel",
 ):
     grid = create_grid(latlim, lonlim, N)
-    computed = model_grid(grid, M, dipolepos, name=name,
-                          returnobj=True, vector=vector)
+    computed = model_grid(grid, M, dipolepos, name=name, returnobj=True, vector=vector)
     return plotmap(
         computed,
         lines=lines,
@@ -347,11 +338,11 @@ def comp_grid_points(
         grid.set_value(value, index=i, vector=True)
         grid.progress1()
         if i % checkpointsnum == 0:
-
             if timestamp:
                 toc = time.perf_counter()
                 print(
-                    f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds")
+                    f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds"
+                )
                 tic = time.perf_counter()
     grid.save_pkl(name=name)
     if alert is True:

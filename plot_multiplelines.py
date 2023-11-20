@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
-from coordinates import coordinates, ll2xyz, ll2pt, pt2xyz
+from coordinates import Coordinates, ll2xyz, ll2pt, pt2xyz
 from lib import B_comp_map, Grid, create_grid, Magneticline
 from field import dipolebetter
 from plots import sphere, disk, plotmap
@@ -26,7 +26,7 @@ alerts = True
 computed = True
 
 m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e5
-pos = coordinates(600000, dipolelat, dipolelon, latlon=True)
+pos = Coordinates(600000, dipolelat, dipolelon, latlon=True)
 pos = pos.vector
 
 borderlat, borderlon = 25, 30
@@ -65,7 +65,7 @@ colors = ['green', 'pink', 'cyan']
 if computed == False:
 
     for i, (lat, lon) in enumerate(points):
-        point = coordinates(696340+100, lat, lon, latlon=True)
+        point = Coordinates(696340+100, lat, lon, latlon=True)
         in_value = dipolebetter(point, dipolemoment=m,
                                 rdipole=pos, returnxyz=True)
         line_model = Magneticline(point, in_value, step=300)

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 import mplstereonet
-from coordinates import coordinates
+from coordinates import Coordinates
 from lib import B_comp_map, Grid
 from field import dipolebetter
 from plots import sphere
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     m = np.asarray([0, 0, 10e6])
 
     for (lat, lon) in B_map.latlon:
-        r1 = coordinates(r, lat, lon, latlon=True)
+        r1 = Coordinates(r, lat, lon, latlon=True)
         B_map.set_value(dipolebetter(r1, m, returnBl=True), lat, lon)
 
     r_high = 900000
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     base_grid = Grid(r, latitudes, longitudes, hs)
 
     for (lat, lon) in B_map_high.latlon:
-        r1 = coordinates(r_high, lat, lon, latlon=True)
+        r1 = Coordinates(r_high, lat, lon, latlon=True)
         B_c = B_comp_map(r1, B_map)
 
         B_map_comp.set_value(B_c, lat, lon, vector=True)

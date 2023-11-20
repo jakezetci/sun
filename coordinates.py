@@ -75,7 +75,7 @@ def xyR2xyz(x, y, R):
     return x, y, z
 
 
-class coordinates:
+class Coordinates:
     def __init__(self, r1, r2, r3, spherical=False, latlon=False):
         if spherical is True:
             self.r, self.phi, self.theta = r1, r2, r3

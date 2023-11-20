@@ -4,24 +4,20 @@ Created on Tue Sep 26 16:17:33 2023
 
 @author: cosbo
 """
-import os.path
-import matplotlib.pyplot as plt
 from astropy.io import fits
-import sunpy.visualization.colormaps as cm
 import drms
 import numpy as np
 import sunpy
 from sunpy.net import Fido, attrs as a
 import astropy.units as u
-import astropy.time
-import textwrap
 import sunpy.map.sources
+
 try:
-    from coordinates import xyz2ll, xyR2xyz, coordinates
+    from coordinates import xyz2ll, xyR2xyz, Coordinates
     from lib import Grid, B_comp
     from plots import config
 except ModuleNotFoundError:
-    from sun.coordinates import xyz2ll, xyR2xyz, coordinates
+    from sun.coordinates import xyz2ll, xyR2xyz, Coordinates
     from sun.lib import Grid, B_comp
     from sun.plots import config
 import time
@@ -101,9 +97,9 @@ def fits_to_Grid(MAP):
     return returnGrid
 
 
-def bitmaps_to_points(time, onlyactive=True, downloaded=False,
-                      magnetogram=None, bitmaps=None):
-
+def bitmaps_to_points(
+    time, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None
+):
     if downloaded is False:
         magnetogram, bitmaps = download_map_and_harp(time, time)
     magnetogram = np.asarray(magnetogram)
@@ -236,8 +232,7 @@ def compute_harp_MEnergy(
 
     def area_simple(xindex, yindex):
         tic = time.perf_counter()
-        tan_dif = np.arctan2(yindex + 1, xindex + 1) - \
-            np.arctan2(yindex, xindex)
+        tan_dif = np.arctan2(yindex + 1, xindex + 1) - np.arctan2(yindex, xindex)
         sqr1 = np.sqrt(1 - d_r_ratio * (xindex**2 + yindex**2))
         sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
         toc = time.perf_counter()
@@ -340,7 +335,6 @@ fig, ax = config(logscaley=True)
 ax.plot(energys, "o")
 """
 if __name__ == "__main__":
-
     magnetogram = [
         "C:/Users/cosbo/sunpy/data/hmi.m_720s.20230808_001200_TAI.3.magnetogram.fits"
     ]
@@ -370,12 +364,11 @@ if __name__ == "__main__":
     #                               '2023-08-08T00:14:00', onlyactive=False,
     #                               downloaded=True, magnetogram=magnetogram,
     #                               bitmaps=bitmaps)
-    dates = [
-        "2023-08-08T00:12:00"
-    ]
-    B, points = bitmaps_to_points(dates, downloaded=True,
-                                  magnetogram=magnetogram, bitmaps=bitmaps)
-    r = coordinates(700000*1000, 60, 30, latlon=True)
+    dates = ["2023-08-08T00:12:00"]
+    B, points = bitmaps_to_points(
+        dates, downloaded=True, magnetogram=magnetogram, bitmaps=bitmaps
+    )
+    r = Coordinates(700000 * 1000, 60, 30, latlon=True)
     print(B_comp(r, B, points))
     # dates = pd.date_range(start="2023-08-08 00:12:00",
     #                      freq="60T", periods=8).values

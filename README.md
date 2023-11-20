@@ -22,7 +22,7 @@
 Небольшой модуль для управления [телеграм-ботом](https://t.me/rafa_alert_bot), который присылает мне отчёты по вычислениям.
 
 ## [coordinates.py](coordinates.py)
-Здесь сидит класс coordinates - который переводит сразу во все системы координат заданную точку. Точку можно задавать тремя способами - coordinates(x,y,z), coordinates(r, phi, theta, spherical=True), coordinates(r, lat, lon, latlon=True).
+Здесь сидит класс Coordinates - который переводит сразу во все системы координат заданную точку. Точку можно задавать тремя способами - Coordinates(x,y,z), Coordinates(r, phi, theta, spherical=True), Coordinates(r, lat, lon, latlon=True).
 В будущем будет совместимость с [astropy.coordinates.SkyCoord](https://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html), но для внутренних вычислений более простой класс работает быстрее.
 
 ## [field.py](field.py)
