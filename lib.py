@@ -11,13 +11,15 @@ from dataclasses import dataclass
 
 
 try:
-    import cPickle as pickle
+
     from coordinates import Coordinates
     from field import dipolebetter
 except ModuleNotFoundError:
-    import pickle
+
     from sun.field import dipolebetter
     from sun.coordinates import Coordinates
+
+import pickle
 
 
 def distance_sphere(a, b, R):
@@ -62,7 +64,8 @@ def distance_sphere(a, b, R):
 
 def find_nearest(array, point, R=696340 * 1e3):
     array = list(map(list, array))
-    dist_arr = np.asarray([np.abs(distance_sphere(a, point, R)) for a in array])
+    dist_arr = np.asarray(
+        [np.abs(distance_sphere(a, point, R)) for a in array])
     idx = dist_arr.argmin()
     return array[idx], idx
 
@@ -159,7 +162,7 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     if type(r1) == Coordinates:
         r1 = r1.vector
     if type(r2) == Coordinates:
-        r2.vector
+        r2 = r2.vector
     x, y, z = r1 - r2
     x1, y1, z1 = r1
     x2, y2, z2 = r2
@@ -335,7 +338,8 @@ class Grid:
         elif area is not False:
             self.area = area
 
-        self.coors_set = [Coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
+        self.coors_set = [Coordinates(self.r, *ll, latlon=True)
+                          for ll in self.latlon]
         self.progress = 0
 
     def set_value(
@@ -383,7 +387,7 @@ class Grid:
         ind = np.where(((np.array(self.latlon) == [lat, lon]).all(1)))
         return self.values[ind]
 
-    def save_pkl(self, name=False):
+    def save_pkl(self, name=False, empty=None, vector=None):
         """
         saves the Grid to a .pkl file
 
@@ -392,22 +396,29 @@ class Grid:
         name : str, optional
             name of the file, by default False
         """
-        if self.progress == 0:
-            empty = True
-        else:
-            empty = False
+
+        if empty is None:
+            if self.progress == 0:
+                empty = True
+            else:
+                empty = False
 
         if empty is True:
-            folder = "emptymaps"
+            folder = 'emptymaps'
         else:
-            if np.count_nonzero(self.values) == 0:
-                folder = "vectormaps"
+            if vector is True:
+                folder = 'vectormaps'
+            elif vector is False:
+                folder = 'Lmaps'
+            elif np.count_nonzero(self.values) == 0:
+                folder = 'vectormaps'
             else:
-                folder = "Lmaps"
+                folder = 'Lmaps'
 
         if name is False:
-            name = f"B_map {self.r:.2}"
-        with open(f"{folder}/{name}.pkl", "wb") as outp:
+            name = f'B_map {self.r:.2}'
+        with open(f'{folder}/{name}.pkl',
+                  'wb') as outp:
             pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
 
     def dataframe(self):
@@ -456,7 +467,8 @@ class Grid:
         """
         self.progress = int(
             max(
-                [np.count_nonzero(self.values), np.count_nonzero(self.valuesvector) / 3]
+                [np.count_nonzero(self.values), np.count_nonzero(
+                    self.valuesvector) / 3]
             )
         )
 
@@ -478,7 +490,8 @@ class Grid:
         """
         manually change coordinates (made for compatability reasons)
         """
-        self.coors_set = [Coordinates(self.r, *ll, latlon=True) for ll in self.latlon]
+        self.coors_set = [Coordinates(self.r, *ll, latlon=True)
+                          for ll in self.latlon]
 
 
 class grid(Grid):
@@ -527,7 +540,8 @@ class Magneticline:
             self.points[-1].vector
         )
         new_point = Coordinates(*new_point)
-        self.values.append(dipolebetter(new_point, m, dipolepos, returnxyz=True))
+        self.values.append(dipolebetter(
+            new_point, m, dipolepos, returnxyz=True))
         self.points.append(new_point)
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
