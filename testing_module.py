@@ -132,7 +132,8 @@ def test_pointlatlon(lattest, lontest, iters=10, dipoleR=600000,
         mapL = model_grid(grid, dipole=mm, dipolepos=pos,
                           vector=False, name='Ltemptest', returnobj=True)
         B_c = B_comp_map(r_point, mapL)
-        B_d = dipolebetter(r_point, m=mm, rdipole=pos, returnxyz=True)
+        B_d = dipolebetter(r_point, dipolemoment=mm,
+                           rdipole=pos, returnxyz=True)
         B_c_array[i], B_d_array[i] = B_c, B_d
         if relative:
             mse_array[i] = mape(B_c, B_d)

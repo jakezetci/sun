@@ -78,7 +78,7 @@ def model_grid(
     name=False,
     returnobj=False,
     checkpoints=10000,
-    alert=True,
+    alert=False,
 ):
     """
     Model dipole grid computation with checkpoints
@@ -147,7 +147,7 @@ def comp_grid(
     checkpoints=721,
     timestamp=False,
     debug=False,
-    alert=True,
+    alert=False,
 ):
     if vector is True:
         folder = "vectormaps"
@@ -174,7 +174,8 @@ def comp_grid(
             grid.save_pkl(name=f"checkpoint2 {name}")
         if timestamp:
             toc = time.perf_counter()
-            print(f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds")
+            print(
+                f"values {i-checkpointsnum} - {i} done in {toc - tic:0.2f} seconds")
             tic = time.perf_counter()
     grid.save_pkl(name=name)
     if alert is True:
@@ -201,7 +202,8 @@ def model_magneticline(
             magline.add_value(dipole, dipolepos)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(
+                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
             if magline.points[-1].r < stoppoint:
@@ -215,7 +217,8 @@ def model_magneticline(
             magline.add_value(dipole, dipolepos)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(
+                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
         return magline
@@ -255,7 +258,8 @@ def comp_magneticline(
             magline.add_value_comp(B_map)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(
+                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
         return magline
@@ -267,7 +271,8 @@ def comp_magneticline(
             magline.add_value_comp(B_map)
             if i % timestamp == 0:
                 toc = time.perf_counter()
-                print(f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
+                print(
+                    f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
             if magline.points[-1].r < stoppoint:
@@ -305,7 +310,8 @@ def create_model_plotmap(
     ylabel="ylabel",
 ):
     grid = create_grid(latlim, lonlim, N)
-    computed = model_grid(grid, M, dipolepos, name=name, returnobj=True, vector=vector)
+    computed = model_grid(grid, M, dipolepos, name=name,
+                          returnobj=True, vector=vector)
     return plotmap(
         computed,
         lines=lines,
@@ -326,7 +332,7 @@ def comp_grid_points(
     checkpoints=721,
     timestamp=False,
     debug=False,
-    alert=True,
+    alert=False,
 ):
     if name is False:
         name = crtname(name)
