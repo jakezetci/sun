@@ -158,8 +158,7 @@ def bitmaps_to_points(
         return np.array(values), np.array(points), np.array(areas)
 
 
-def download_map_and_harp(timestart, timeend, harp_num=None,
-                          noaa_num=None):
+def download_map_and_harp(timestart, timeend, **HARPkeywords):
     series_M = "hmi.M_720s"
     series_bitmap = "hmi.Mharp_720s"
     res_bitmap = Fido.search(
@@ -167,27 +166,18 @@ def download_map_and_harp(timestart, timeend, harp_num=None,
         a.jsoc.Series(series_M),
         a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
     )
-    HARP_arguments = [a.Time(timestart, timeend),
-                      a.jsoc.Series(series_bitmap),
-                      a.jsoc.Segment("bitmap"),
-                      a.jsoc.Notify("rrzhdanov@edu.hse.ru"),]
-
     downloaded_magnetogram = Fido.fetch(res_bitmap).data
-    if harp_num is not None:
-        res_M = Fido.search(
-            a.Time(timestart, timeend),
-            a.jsoc.Series(series_bitmap),
-            a.jsoc.Segment("bitmap"),
-            a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
-            a.jsoc.Keyword('HARPNUM') == harp_num,
-        )
 
-    res_M = Fido.search(
-        a.Time(timestart, timeend),
-        a.jsoc.Series(series_bitmap),
-        a.jsoc.Segment("bitmap"),
-        a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
-    )
+    HARP_args = [a.Time(timestart, timeend),
+                 a.jsoc.Series(series_bitmap),
+                 a.jsoc.Segment("bitmap"),
+                 a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+                 ]
+
+    for key, value in HARPkeywords.items():
+        HARP_args.append(a.jsoc.Keyword(key) == value)
+
+    res_M = Fido.search(*HARP_args)
     downloaded_bitmaps = Fido.fetch(res_M).data
     return downloaded_magnetogram, downloaded_bitmaps
 
