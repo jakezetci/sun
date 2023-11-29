@@ -7,21 +7,24 @@ Created on Tue Sep 19 21:22:29 2023
 
 import numpy as np
 
+from astropy.io import fits
 
 import os
 import time
 import telebot
 
 try:
-    from coordinates import Coordinates
-    from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
+    from coordinates import Coordinates, xyR2xyz
+    from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp, Grid3D
     from field import dipolebetter
     from plots import sphere, disk, plotmap
+    from pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian
 except ModuleNotFoundError:
-    from sun.coordinates import Coordinates
-    from sun.lib import B_comp_map, Grid, create_grid, Magneticline, B_comp
+    from sun.coordinates import Coordinates, xyR2xyz
+    from sun.lib import B_comp_map, Grid, create_grid, Magneticline, B_comp, Grid3D
     from sun.field import dipolebetter
     from sun.plots import sphere, disk, plotmap
+    from sun.pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian
 
 
 try:
@@ -355,6 +358,90 @@ def comp_grid_points(
         alert_bot("расчётная сетка посчиталась...")
     if returnobj:
         return grid
+
+
+def smart_compute(time, onlyactive=True):
+    def create_3Dgrid(header):
+        return Grid3D()
+    magnetogram, bitmap_paths = download_map_and_harp(time, time)
+
+    for bitmap_path in bitmap_paths:
+        bitmap = fits.open(bitmap_path)
+
+        databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
+        ref1, ref2 = hdrbitmap["CRPIX1"], hdrbitmap["CRPIX2"]
+        active_indeces = np.argwhere(databitmap == 34)
+        if onlyactive is False:
+            quiet_indeces = np.argwhere(databitmap == 33)
+            active_indeces = np.vstack([active_indeces, quiet_indeces])
+        correction = np.full_like(active_indeces, [ref1, ref2])
+        active_onmap = active_indeces + correction
+        for xindex, yindex in active_onmap:
+            """
+            B = dataMap[xindex, yindex]
+            x, y = -d_pixel * (xindex - centerX), -d_pixel * (yindex - centerY)
+            points.append(xyR2xyz(x, y, r_sun))
+            values.append(B)
+            """
+
+
+def single_bitmap_energy(bitmap_path, magnetogram_path, gap=0.0,
+                         onlyactive=True, timestamp=100):
+    """
+    smart
+
+    """
+    def create_3Dgrid(hdr):
+        pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
+        r_sun = hdr["RSUN_REF"]
+
+        d_pixel = np.mean([pxsizeX, pxsizeY])
+        dOBS = hdr["DSUN_OBS"]
+        d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+        mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
+        ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
+        bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
+
+        pixel_xs = np.linspace(start=ref1, stop=ref1+mapsizeX, num=mapsizeX)
+        pixel_ys = np.linspace(start=ref2, stop=ref2+mapsizeY, num=mapsizeY)
+
+        xs_unique = (pixel_xs - cX) * d_pixel
+        ys_unique = (pixel_ys - cY) * d_pixel
+
+        z_num = np.max([mapsizeX, mapsizeY])
+        z_size = z_num*d_pixel/2
+
+        __x, __y, z = xyR2xyz(bitmapcenterX*d_pixel, bitmapcenterY * d_pixel,
+                              r_sun)
+        zs_unique = np.linspace(z-z_size, z+z_size, num=z_num)
+
+        xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
+
+        xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
+
+        basic_volume = ((xs_unique[1]-xs_unique[0]) *
+                        (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
+        return Grid3D(xs, ys, zs), basic_volume
+
+    values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
+                                                              bitmaps=bitmap_path,
+                                                              magnetogram=magnetogram_path,
+                                                              onlyactive=True,
+                                                              returnhdr=True)
+
+    grid, basic_volume = create_3Dgrid(hdrs[0])
+    energy = 0
+    tic = time.perf_counter()
+    for i, xyz in enumerate(grid.xyz):
+
+        B = B_comp(xyz, values, points, areas)
+        energy = energy + B**2 * basic_volume
+        if i % timestamp == 0:
+            toc = time.perf_counter()
+            print(
+                f"values {i-timestamp} - {i} done in {toc - tic:0.2f} seconds")
+            tic = time.perf_counter()
+    return energy
 
 
 def compute_grid_energy(grid: Grid):
