@@ -98,10 +98,22 @@ def fits_to_Grid(MAP):
 
 
 def bitmaps_to_points(
-    time, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None
+    TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
+    returnhdr=False
 ):
+    def area_simple(xindex, yindex):
+        tic = time.perf_counter()
+        tan_dif = np.arctan2(yindex + 1, xindex + 1) - \
+            np.arctan2(yindex, xindex)
+        sqr1 = np.sqrt(1 - d_r_ratio * (xindex**2 + yindex**2))
+        sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
+        toc = time.perf_counter()
+        area = np.abs(tan_dif * (sqr1 - sqr2) * r_sun**2)
+        # print(f'{toc-tic:.4} sec, {area}')
+        return area
+
     if downloaded is False:
-        magnetogram, bitmaps = download_map_and_harp(time, time)
+        magnetogram, bitmaps = download_map_and_harp(TIME, TIME)
     magnetogram = np.asarray(magnetogram)
     MAP = fits.open(magnetogram[0])
     dataMap, hdrMap = MAP[1].data, MAP[1].header
@@ -113,14 +125,20 @@ def bitmaps_to_points(
     d_pixel = arcsecs_to_radian(d_pixel) * dOBS
 
     r_sun = hdrMap["RSUN_REF"]
+    d_r_ratio = (arcsecs_to_radian(d_pixel) * dOBS / r_sun) ** 2
 
     centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
     points = []
     values = []
+    areas = []
+    if returnhdr:
+        headers = []
     for i, bitmap_path in enumerate(bitmaps):
         bitmap = fits.open(bitmap_path)
 
         databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
+        if returnhdr:
+            headers.append(hdrbitmap)
         ref1, ref2 = hdrbitmap["CRPIX1"], hdrbitmap["CRPIX2"]
         active_indeces = np.argwhere(databitmap == 34)
         if onlyactive is False:
@@ -133,10 +151,15 @@ def bitmaps_to_points(
             x, y = -d_pixel * (xindex - centerX), -d_pixel * (yindex - centerY)
             points.append(xyR2xyz(x, y, r_sun))
             values.append(B)
-    return np.array(values), np.array(points)
+            areas.append(area_simple(xindex, yindex))
+    if returnhdr:
+        return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
+    else:
+        return np.array(values), np.array(points), np.array(areas)
 
 
-def download_map_and_harp(timestart, timeend):
+def download_map_and_harp(timestart, timeend, harp_num=None,
+                          noaa_num=None):
     series_M = "hmi.M_720s"
     series_bitmap = "hmi.Mharp_720s"
     res_bitmap = Fido.search(
@@ -144,8 +167,20 @@ def download_map_and_harp(timestart, timeend):
         a.jsoc.Series(series_M),
         a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
     )
+    HARP_arguments = [a.Time(timestart, timeend),
+                      a.jsoc.Series(series_bitmap),
+                      a.jsoc.Segment("bitmap"),
+                      a.jsoc.Notify("rrzhdanov@edu.hse.ru"),]
 
     downloaded_magnetogram = Fido.fetch(res_bitmap).data
+    if harp_num is not None:
+        res_M = Fido.search(
+            a.Time(timestart, timeend),
+            a.jsoc.Series(series_bitmap),
+            a.jsoc.Segment("bitmap"),
+            a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+            a.jsoc.Keyword('HARPNUM') == harp_num,
+        )
 
     res_M = Fido.search(
         a.Time(timestart, timeend),
@@ -232,7 +267,8 @@ def compute_harp_MEnergy(
 
     def area_simple(xindex, yindex):
         tic = time.perf_counter()
-        tan_dif = np.arctan2(yindex + 1, xindex + 1) - np.arctan2(yindex, xindex)
+        tan_dif = np.arctan2(yindex + 1, xindex + 1) - \
+            np.arctan2(yindex, xindex)
         sqr1 = np.sqrt(1 - d_r_ratio * (xindex**2 + yindex**2))
         sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
         toc = time.perf_counter()

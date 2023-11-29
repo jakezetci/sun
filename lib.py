@@ -186,7 +186,7 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     return np.array([G1, G2, G3]) / (4 * np.pi * a)
 
 
-def B_comp(r, values: np.array, points: np.array):
+def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
     computes
 
@@ -205,8 +205,8 @@ def B_comp(r, values: np.array, points: np.array):
 
     """
     B = np.asarray([0.0, 0.0, 0.0], dtype=np.float64)
-    for value, point in zip(values, points):
-        add = value * np.asarray(GreenBl(r, point))
+    for value, point, area in zip(values, points, areas):
+        add = value * np.asarray(GreenBl(r, point)) * area
         B = B + add
     return B
 
@@ -497,6 +497,20 @@ class Grid:
 class grid(Grid):
     # a class that exists only for backward compatibility reasons
     pass
+
+
+class Grid3D():
+    def __init__(self, xs, ys, zs):
+        self.values = np.zeros_like(xs)
+        self.x = xs
+        self.y = ys
+        self.z = zs
+        self.xyz = list(map(list, zip(xs, ys, zs)))
+
+    def set_value(self, value, coor=None, ind=None):
+        if coor is None:
+            ind = np.where(((np.array(self.xyz) == coor).all(1)))
+        self.values[ind] = value
 
 
 def load_grid(df):
