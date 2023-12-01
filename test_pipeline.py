@@ -41,13 +41,21 @@ for keyword in sorted(series_info.keywords.index):
 print(client.pkeys(series))
 print(series_info.segments.index.values)
 print(f"  note ....... {keyword_info.note} ")
-res2 = Fido.search(a.Time('2023-08-08T00:12:00', '2023-08-08T00:12:00'),
-                   a.jsoc.Series(series),
-                   a.jsoc.Notify('rrzhdanov@edu.hse.ru'))
 
-downloaded_files = Fido.fetch(res2).data
+series_bitmap = "hmi.M_720s"
+time = "2023-08-08 00:12:00"
+res_M = Fido.search(
+    a.Time(time, time),
+    a.jsoc.Series(series_bitmap),
+    a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+)
 
-MAP = fits.open(downloaded_files[0])
+downloaded_bitmaps = Fido.fetch(res_M).data
+
+MAP = fits.open(downloaded_bitmaps[0])
 data, hdr = MAP[-1].data, MAP[-1].header
 
-print(hdr["T_REC"])
+print(np.shape(data))
+kwords = list(hdr.keys())
+for kword in sorted(kwords):
+    print(f'{kword} : {hdr[kword]}')

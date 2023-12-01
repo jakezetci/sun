@@ -61,7 +61,7 @@ def xyz2truexyz(x, y, z):
     return -x, z, y
 
 
-def xy2ll(x, y, r=696340):
+def xy2ll(x, y, r=696340*1e3):
     theta = math.acos(y / r)
     phi = math.asin(x / (r * math.sin(theta)))
     return pt2ll(phi, theta)
@@ -70,8 +70,9 @@ def xy2ll(x, y, r=696340):
 def xyR2xyz(x, y, R):
     """
     ну это гениальная функция
+    но надо аккуратнее, работает только с z > 0
     """
-    z = R**2 - x**2 - y**2
+    z = np.sqrt(R**2 - x**2 - y**2)
     return x, y, z
 
 

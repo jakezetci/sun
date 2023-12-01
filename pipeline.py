@@ -11,6 +11,7 @@ import sunpy
 from sunpy.net import Fido, attrs as a
 import astropy.units as u
 import sunpy.map.sources
+import matplotlib.pyplot as plt
 
 try:
     from coordinates import xyz2ll, xyR2xyz, Coordinates
@@ -27,6 +28,11 @@ import pandas as pd
 
 def arcsecs_to_radian(arcsecs):
     return np.radians(arcsecs / 3600)
+
+
+def bitmap_pixel_to_map(index, reference1, reference2):
+    correction = np.full_like(index, [reference2, reference1])
+    return index+correction
 
 
 def fits_to_Grid(MAP):
@@ -101,7 +107,85 @@ def bitmaps_to_points(
     TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
     returnhdr=False
 ):
+
     def area_simple(xindex, yindex):
+        xindex = xindex - centerX
+        yindex = yindex - centerY
+        tic = time.perf_counter()
+        tan_dif = (np.arctan2(yindex + 1, xindex + 1) -
+                   np.arctan2(yindex, xindex))
+        sqr1 = np.sqrt(1 - d_r_ratio * (xindex**2 + yindex**2))
+        sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
+        toc = time.perf_counter()
+        area = np.abs(tan_dif * (sqr1 - sqr2) * r_sun**2)
+        #print(f'{toc-tic:.4} sec, {area}')
+        return area
+
+    if downloaded is False:
+        magnetogram, bitmaps = download_map_and_harp(TIME, TIME)
+    magnetogram = np.asarray(magnetogram)
+    MAP = fits.open(magnetogram[0])
+    dataMap, hdrMap = MAP[1].data, MAP[1].header
+    HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
+    dOBS = hdrMap["DSUN_OBS"]
+    pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
+
+    # plt.imshow(dataMap)
+    d_pixel_arcs = np.mean([pxsizeX, pxsizeY])
+
+    d_pixel = arcsecs_to_radian(d_pixel_arcs) * dOBS
+
+    r_sun = hdrMap["RSUN_REF"]
+    d_r_ratio = (d_pixel / r_sun)
+    d_r_ratio = d_r_ratio**2
+
+    centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
+    points = []
+    values = []
+    areas = []
+    if returnhdr:
+        headers = []
+    for i, bitmap_path in enumerate(bitmaps):
+        bitmap = fits.open(bitmap_path)
+
+        databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
+        if returnhdr:
+            headers.append(hdrbitmap)
+        ref1, ref2 = int(hdrbitmap["CRPIX1"]), int(hdrbitmap["CRPIX2"])
+        #plt.plot(ref1, ref2, 'o', ms=12)
+        active_indeces = np.argwhere(databitmap == 34)
+        if onlyactive is False:
+            quiet_indeces = np.argwhere(databitmap == 33)
+            active_indeces = np.vstack([active_indeces, quiet_indeces])
+        active_onmap = bitmap_pixel_to_map(active_indeces, ref1, ref2)
+        for xindex, yindex in active_indeces:
+            #plt.plot(yindex, xindex, 'o', ms=4, color='pink')
+            tic = time.perf_counter()
+            B = dataMap[xindex+ref2, yindex+ref1]
+            x_corr, y_corr = -(xindex+ref1 - centerX), -(yindex+ref2 - centerY)
+
+            x, y = d_pixel * x_corr, d_pixel * y_corr
+
+            points.append(xyR2xyz(x, y, r_sun))
+            toc = time.perf_counter()
+
+            values.append(B)
+            areas.append(area_simple(-(xindex-ref1), -(yindex-ref2)))
+    if returnhdr:
+        return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
+    else:
+        return np.array(values), np.array(points), np.array(areas)
+
+
+def bitmaps_to_points_slow(
+    TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
+    returnhdr=False
+):
+    # same function but it uses skycoord.pixel_to_world
+    def area_simple(xindex, yindex):
+        # delta is consistent in dumb method so i keep it
+        xindex = xindex - centerX
+        yindex = yindex - centerY
         tic = time.perf_counter()
         tan_dif = np.arctan2(yindex + 1, xindex + 1) - \
             np.arctan2(yindex, xindex)
@@ -117,15 +201,17 @@ def bitmaps_to_points(
     magnetogram = np.asarray(magnetogram)
     MAP = fits.open(magnetogram[0])
     dataMap, hdrMap = MAP[1].data, MAP[1].header
+    HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
     dOBS = hdrMap["DSUN_OBS"]
     pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
 
-    d_pixel = np.mean([pxsizeX, pxsizeY])
+    d_pixel_arcs = np.mean([pxsizeX, pxsizeY])
 
-    d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+    d_pixel = arcsecs_to_radian(d_pixel_arcs) * dOBS
 
     r_sun = hdrMap["RSUN_REF"]
-    d_r_ratio = (arcsecs_to_radian(d_pixel) * dOBS / r_sun) ** 2
+    d_r_ratio = (d_pixel / r_sun)
+    d_r_ratio = d_r_ratio**2
 
     centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
     points = []
@@ -146,14 +232,26 @@ def bitmaps_to_points(
             active_indeces = np.vstack([active_indeces, quiet_indeces])
         correction = np.full_like(active_indeces, [ref1, ref2])
         active_onmap = active_indeces + correction
-        for xindex, yindex in active_onmap:
+        tic = time.perf_counter()
+        for j, (xindex, yindex) in enumerate(active_onmap):
             B = dataMap[xindex, yindex]
-            x, y = -d_pixel * (xindex - centerX), -d_pixel * (yindex - centerY)
-            points.append(xyR2xyz(x, y, r_sun))
+            skycoord = HMIMAP.pixel_to_world(
+                u.Quantity(xindex, unit="pix"), u.Quantity(yindex, unit="pix")
+            )
+
+            x = skycoord.heliocentric.x.value
+            y = skycoord.heliocentric.y.value
+            z = skycoord.heliocentric.z.value
+
             values.append(B)
             areas.append(area_simple(xindex, yindex))
+            if j % 100 == 0:
+                toc = time.perf_counter()
+                print(
+                    f"values {j-100}-{j} done in {toc - tic:0.2f} seconds")
+                tic = time.perf_counter()
     if returnhdr:
-        return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
+        return (np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY), HMIMAP)
     else:
         return np.array(values), np.array(points), np.array(areas)
 
@@ -282,11 +380,6 @@ def compute_harp_MEnergy(
     return energy_onetime(dataMap, bitmaps)
 
 
-series = "hmi.M_720s"
-# Create DRMS JSON client, use debug=True to see the query URLs
-client = drms.Client(email="rrzhdanov@edu.hse.ru")
-
-
 """
 
 # Query series info
@@ -361,6 +454,10 @@ fig, ax = config(logscaley=True)
 ax.plot(energys, "o")
 """
 if __name__ == "__main__":
+
+    series = "hmi.M_720s"
+    # Create DRMS JSON client, use debug=True to see the query URLs
+    client = drms.Client(email="rrzhdanov@edu.hse.ru")
     magnetogram = [
         "C:/Users/cosbo/sunpy/data/hmi.m_720s.20230808_001200_TAI.3.magnetogram.fits"
     ]

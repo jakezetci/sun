@@ -252,7 +252,7 @@ def disk(
         if i == 0:
             rotationnum = math.atan((yy[2] - yy[0]) / (xx[2] - xx[0]))
             rotationnum = math.degrees(rotationnum) + 180
-        elif i == n - 1:
+        elif i == n_lines - 1:
             ax.annotate(
                 f"{one:.1f}",
                 xy=(xx[arg_min], yy[arg_min]),
@@ -409,5 +409,6 @@ def plotmap(
             xx[i], yy[i], uu[i], vv[i] = x, y, u, v
             cc[i] = math.sqrt(u**2 + v**2)
         ax.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
-    mode(ax, latlims, lonlims, n=n_lines, r=B_map.r, lw=lw, ignoretop=ignoretop)
+    mode(ax, latlims, lonlims, n_lines=n_lines,
+         r=B_map.r, lw=lw, ignoretop=ignoretop)
     return fig, ax

@@ -8,7 +8,7 @@ Created on Tue Sep 19 21:22:29 2023
 import numpy as np
 
 from astropy.io import fits
-
+import astropy.units as u
 import os
 import time
 import telebot
@@ -18,13 +18,13 @@ try:
     from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp, Grid3D
     from field import dipolebetter
     from plots import sphere, disk, plotmap
-    from pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian
+    from pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian, bitmaps_to_points_slow
 except ModuleNotFoundError:
     from sun.coordinates import Coordinates, xyR2xyz
     from sun.lib import B_comp_map, Grid, create_grid, Magneticline, B_comp, Grid3D
     from sun.field import dipolebetter
     from sun.plots import sphere, disk, plotmap
-    from sun.pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian
+    from sun.pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian, bitmaps_to_points_slow
 
 
 try:
@@ -253,12 +253,13 @@ def comp_magneticline(
     timestamp=1000,
     alert=True,
     stoppoint=False,
+    sign=+1
 ):
     def steps_comp():
         start = magline.progress
         tic = time.perf_counter()
         for i in range(start, maxsteps):
-            magline.add_value_comp(B_map)
+            magline.add_value_comp(B_map, sign=sign)
             if i % timestamp == 0:
                 toc = time.perf_counter()
                 print(
@@ -271,7 +272,7 @@ def comp_magneticline(
         start = magline.progress
         tic = time.perf_counter()
         for i in range(start, maxsteps):
-            magline.add_value_comp(B_map)
+            magline.add_value_comp(B_map, sign=sign)
             if i % timestamp == 0:
                 toc = time.perf_counter()
                 print(
@@ -317,7 +318,7 @@ def create_model_plotmap(
                           returnobj=True, vector=vector)
     return plotmap(
         computed,
-        lines=lines,
+        n_lines=lines,
         alpha=alpha,
         lw=lw,
         title=title,
@@ -385,13 +386,11 @@ def smart_compute(time, onlyactive=True):
             """
 
 
-def single_bitmap_energy(bitmap_path, magnetogram_path, gap=0.0,
+def single_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
                          onlyactive=True, timestamp=100):
-    """
-    smart
 
-    """
-    def create_3Dgrid(hdr):
+    def create_3Dgrid(hdr, density):
+
         pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
         r_sun = hdr["RSUN_REF"]
 
@@ -402,18 +401,20 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, gap=0.0,
         ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
         bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
 
-        pixel_xs = np.linspace(start=ref1, stop=ref1+mapsizeX, num=mapsizeX)
-        pixel_ys = np.linspace(start=ref2, stop=ref2+mapsizeY, num=mapsizeY)
+        pixel_xs = np.linspace(start=ref1, stop=ref1 +
+                               mapsizeX, num=int(mapsizeX/density))
+        pixel_ys = np.linspace(start=ref2, stop=ref2 +
+                               mapsizeY, num=int(mapsizeY/density))
 
-        xs_unique = (pixel_xs - cX) * d_pixel
-        ys_unique = (pixel_ys - cY) * d_pixel
+        xs_unique = -(pixel_xs-cX) * d_pixel
+        ys_unique = -(pixel_ys-cY) * d_pixel
 
         z_num = np.max([mapsizeX, mapsizeY])
-        z_size = z_num*d_pixel/2
+        z_size = z_num*d_pixel
 
-        __x, __y, z = xyR2xyz(bitmapcenterX*d_pixel, bitmapcenterY * d_pixel,
+        __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
                               r_sun)
-        zs_unique = np.linspace(z-z_size, z+z_size, num=z_num)
+        zs_unique = np.linspace(z, z+z_size, num=int(z_num/density))
 
         xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
 
@@ -421,21 +422,56 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, gap=0.0,
 
         basic_volume = ((xs_unique[1]-xs_unique[0]) *
                         (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
-        return Grid3D(xs, ys, zs), basic_volume
+        return Grid3D(xs, ys, zs), basic_volume * 1e6
+
+    def create_3Dgrid_slow(hdr, density):
+        def vector(ind1, ind2):
+            c = hmimap.pixel_to_world(
+                u.Quantity(ind1, unit="pix"), u.Quantity(
+                    ind2, unit="pix")
+            )
+            return np.array([c.heliocentric.x.value,
+                             c.heliocentric.y.value, c.heliocentric.z.value])
+
+        mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
+        z_num = np.max([mapsizeX, mapsizeY])
+
+        ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
+        bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
+
+        center = vector(bitmapcenterX, bitmapcenterY)
+        corner = vector(ref1, ref2)
+        x_del, y_del, z_del = center - corner
+        z_del = np.max([np.abs(x_del), np.abs(y_del)])
+        x_unique = np.linspace(start=corner[0], stop=center[0]+x_del,
+                               num=int(mapsizeX/density))
+        y_unique = np.linspace(start=corner[1], stop=center[1]+y_del,
+                               num=int(mapsizeY/density))
+        z_unique = np.linspace(start=center[2], stop=center[2]+z_del*2,
+                               num=int(z_num/density))
+
+        xs, ys, zs = np.meshgrid(x_unique, y_unique, z_unique)
+
+        xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
+
+        basic_volume = ((x_unique[1]-x_unique[0]) *
+                        (y_unique[1]-y_unique[0])*(z_unique[1]-z_unique[0]))
+        return Grid3D(xs, ys, zs), basic_volume * 1e6
 
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
                                                               magnetogram=magnetogram_path,
-                                                              onlyactive=True,
+                                                              onlyactive=onlyactive,
                                                               returnhdr=True)
 
-    grid, basic_volume = create_3Dgrid(hdrs[0])
+    grid, basic_volume = create_3Dgrid(hdrs[0], density)
     energy = 0
     tic = time.perf_counter()
+    print(f'total values = {grid.num}')
     for i, xyz in enumerate(grid.xyz):
 
         B = B_comp(xyz, values, points, areas)
-        energy = energy + B**2 * basic_volume
+        energy = energy + (np.linalg.norm(B)**2 * basic_volume)/(8*np.pi)
         if i % timestamp == 0:
             toc = time.perf_counter()
             print(

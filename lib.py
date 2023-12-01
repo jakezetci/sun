@@ -506,6 +506,7 @@ class Grid3D():
         self.y = ys
         self.z = zs
         self.xyz = list(map(list, zip(xs, ys, zs)))
+        self.num = np.shape(self.values)[0]
 
     def set_value(self, value, coor=None, ind=None):
         if coor is None:
@@ -560,8 +561,8 @@ class Magneticline:
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
-    def add_value_comp(self, B_map, stoppoint=None):
-        vec = np.asarray(self.values[-1])
+    def add_value_comp(self, B_map, stoppoint=None, sign=+1):
+        vec = np.asarray(self.values[-1]) * sign
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector
         )
