@@ -23,10 +23,10 @@ dipolelat, dipolelon = 60, 30
 phi, theta = ll2pt(60, 30)
 
 alerts = True
-computed = True
+computed = False
 
 m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e5
-pos = Coordinates(600000, dipolelat, dipolelon, latlon=True)
+pos = Coordinates(600000*1e3, dipolelat, dipolelon, latlon=True)
 pos = pos.vector
 
 borderlat, borderlon = 25, 30
@@ -42,13 +42,14 @@ if computed == False:
 else:
     pass
 
-steps = 5000
-xmin, xmax = -1e4, 5.5e5
-ymin, ymax = 4.4e5, 7.4e5
+steps = 1000
+xmin, xmax = -1e4*1e3, 5.5e5*1e3
+ymin, ymax = 4.4e5*1e3, 7.4e5*1e3
+computed = True
 if computed == True:
     with open('Lmaps/Диполь 60, 30 closeup.pkl', 'rb') as fmap:
         picturemap = pickle.load(fmap)
-    fig, ax = plotmap(picturemap, lines=21, alpha=0.6, lw=1.5, xlabel='X, km', ylabel='Y, km',
+    fig, ax = plotmap(picturemap, n_lines=21, alpha=0.6, lw=1.5, xlabel='X, km', ylabel='Y, km',
                       title='Magnetic lines of a dipole at (60,30)', ignoretop=True,
                       xlimit=[xmin, xmax], ylimit=[ymin, ymax])
 else:
@@ -59,23 +60,25 @@ else:
                                    title='Magnetic lines of a dipole at (60,30)')
 
 
-points = [[60, 36], [59, 38], [58, 32]]
-colors = ['green', 'pink', 'cyan']
+points = [[60, 36],]  # [59, 38], [58, 32]
+colors = ['green',]  # 'pink', 'cyan']
 
+
+computed = True
 if computed == False:
 
     for i, (lat, lon) in enumerate(points):
-        point = Coordinates(696340+100, lat, lon, latlon=True)
+        point = Coordinates(696440*1e3, lat, lon, latlon=True)
         in_value = dipolebetter(point, dipolemoment=m,
                                 rdipole=pos, returnxyz=True)
-        line_model = Magneticline(point, in_value, step=300)
-        line_comp = Magneticline(point, in_value, step=600)
+        line_model = Magneticline(point, in_value, step=300*1e3)
+        line_comp = Magneticline(point, in_value, step=600*1e3)
         line_model = model_magneticline(line_model, m, pos, returnobj=True,
                                         name=f'presentable model line {lat} {lon}', maxsteps=steps,
-                                        timestamp=1000, alert=alerts, stoppoint=696000)
+                                        timestamp=1000, alert=alerts, stoppoint=696000*1e3)
         line_comp = comp_magneticline(line_comp, Lmap, returnobj=True,
                                       name=f'presentable comp line {lat} {lon}', maxsteps=steps,
-                                      timestamp=100, alert=alerts, stoppoint=696000)
+                                      timestamp=100, alert=alerts, stoppoint=696000*1e3)
 
         xx_model, yy_model, zz_model = np.array(line_model.pointsxyz).T
         xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T

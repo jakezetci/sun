@@ -18,7 +18,7 @@ from plots import sphere
 
 if __name__ == "__main__":
 
-    latitudes, longitudes = np.loadtxt('lat-lon.txt')
+    latitudes, longitudes = np.loadtxt('lat-lon files/lat-lon.txt')
 
     N = int(np.sqrt(latitudes.size))
     latlims = [latitudes.min(), latitudes.max()]

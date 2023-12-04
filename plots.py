@@ -293,7 +293,7 @@ def disk(
             ax.annotate(
                 "longitudes",
                 xy=(xx[arg_min], yy[arg_min]),
-                fontsize="x-small",
+                fontsize="medium",
                 color=color,
                 xytext=(0, -1),
                 textcoords="offset fontsize",
@@ -302,7 +302,7 @@ def disk(
                 "latitudes",
                 xy=(xx[arg_min], yy[arg_min]),
                 color=color,
-                fontsize="x-small",
+                fontsize="medium",
                 ha="right",
                 rotation=rotationnum,
                 xytext=(-0.5, 0),
