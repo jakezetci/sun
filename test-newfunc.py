@@ -12,6 +12,6 @@ bitmap_path = [
 magnetogram_path = [
     r'C:\Users\cosbo\sunpy\data\hmi.m_720s.20110215_000000_TAI.1.magnetogram.fits']
 
-energy = single_bitmap_energy(bitmap_path, magnetogram_path, density=30,
-                              timestamp=5, onlyactive=True)
+energy = single_bitmap_energy(bitmap_path, magnetogram_path, density=50,
+                              timestamp=5, onlyactive=False)
 print(energy)

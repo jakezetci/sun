@@ -19,6 +19,8 @@ import coordinates
 import lib
 import plots
 import computing
+import pickle
+import math
 
 
 def area_simple(xindex, yindex, d_r_ratio=2.692592614123163e-07, r_sun=696000*1e3):
@@ -93,16 +95,26 @@ area = np.full_like(lats, area_simple(ref1, ref2))
 grid = lib.Grid(696000*1e3, lats, lons, area=area)
 grid.set_allvalues(values, vector=False)
 
-fig, ax = plots.plotmap(grid, n_lines=8)
 
+xlim = [0.0, 3*1e8]
+ylim = [-2.5*1e8, -9.85*1e7]
+"""fig, ax = plots.plotmap(grid, n_lines=8, xlimit=xlim, ylimit=ylim,
+                        title='NOAA 11158 15 Feb 2011',
+                        xlabel='X, m', ylabel='Y, m')
+"""
+fig, ax = plots.config(ylabel='Z')
 
 #################
 active_indeces = np.argwhere(databitmap == 34)
-active_onmap = pipeline.bitmap_pixel_to_map(active_indeces, ref1, ref2)
+#active_onmap = pipeline.bitmap_pixel_to_map(active_indeces, ref1, ref2)
 lats_new, lons_new, values_new = [], [], []
-for i, j in active_onmap:
-    B = dataMap[i, j]
-    x, y = d_pixel * (i-centerX), d_pixel * (j-centerY)
+for i, j in active_indeces:
+    B = dataMap[i+ref2, j+ref1]
+    x, y = -d_pixel * (i-centerX), -d_pixel * (j-centerY)
+    x_corr, y_corr = -(i+ref1 - centerX), -(j+ref2 - centerY)
+
+    x, y = d_pixel * x_corr, d_pixel * y_corr
+
     lat, lon = coordinates.xy2ll(x, y)
     lats_new.append(lat)
     lons_new.append(lon)
@@ -113,18 +125,41 @@ lons_new = np.array(lons_new)
 Lmap = lib.grid(696000*1e3, lats_new, lons_new, area=area)
 Lmap.set_allvalues(values_new, vector=False)
 
-start_point = coordinates.Coordinates(
-    696100*1e3, -15.112571406076201, 10.271417374580558, latlon=True)
-in_value = lib.B_comp_map(start_point, Lmap)
+computed = True
 
 
-line_comp = lib.Magneticline(start_point, in_value, step=300*1e3)
-steps = 100
+# 'maglines/REAL line v2.pkl', 'maglines/REAL line v3.pkl',
+names = ['maglines/REAL line v10.pkl', 'maglines/REAL line v7.pkl',
+         'maglines/REAL line v11.pkl']
+#         'maglines/REAL line v5.pkl', 'maglines/REAL line v6.pkl']
+colors = ['green', 'pink', 'cyan', 'yellow', 'black',
+          'red', 'grey']
 
-line_comp = computing.comp_magneticline(line_comp, Lmap, returnobj=True,
-                                        name=f'REAL line v5', maxsteps=steps,
-                                        timestamp=10, alert=True, stoppoint=693000*1e3,
-                                        sign=1)
-xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T
+if computed == False:
 
-ax.plot(xx_comp, yy_comp, '--', lw=2)
+    xyz = coordinates.xyR2xyz(1.54*1e8, -1.54*1e8, 696000*1e3)
+
+    start_point = coordinates.Coordinates(*xyz)
+    in_value = lib.B_comp_map(start_point, Lmap)
+
+    line_comp = lib.Magneticline(start_point, in_value, step=300*1e3)
+    steps = 100
+    sign = math.copysign(1, in_value[2])
+    line_comp = computing.comp_magneticline(line_comp, Lmap, returnobj=True,
+                                            name=f'REAL line v12', maxsteps=steps,
+                                            timestamp=10, alert=False, stoppoint=696000*1e3,
+                                            sign=sign)
+    xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T
+
+    ax.plot(xx_comp, zz_comp, '--', lw=2)
+else:
+    for i, name in enumerate(names):
+
+        with open(name, 'rb') as f_comp:
+            line_comp = pickle.load(f_comp)
+        xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T
+        ax.plot(xx_comp, zz_comp, '-', color=colors[i],
+                label=f'computed line {i+1}', lw=2)
+
+
+ax.legend(loc='best', fontsize='x-large')
