@@ -55,10 +55,14 @@ def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
 
 
 def alert_bot(status_message, imagepath=False):
-    bot = telebot.TeleBot(API_TOKEN)
-    bot.send_message(call_id, status_message)
-    if imagepath is not False:
-        bot.send_photo(call_id, telebot.types.InputFile(imagepath))
+    try:
+        bot = telebot.TeleBot(API_TOKEN)
+        bot.send_message(call_id, status_message)
+        if imagepath is not False:
+            bot.send_photo(call_id, telebot.types.InputFile(imagepath))
+    except ConnectionError:
+        print('No connection to internet to alert bot')
+        pass
 
 
 def crtname(name):
