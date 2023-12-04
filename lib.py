@@ -73,7 +73,7 @@ def find_nearest(array, point, R=696340 * 1e3):
 def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     """
     Computes Green`s function based on Sadykov-Zimovets work
-
+    This is a readable version with formuale being consistent with the article
     Parameters
     ----------
     r1 : Coordinates or np.array
@@ -92,11 +92,11 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     """
 
     def I1(r1, r2):
-        x, y, z = r1 - r2  # разница векторов
+        x, y, z = r1 - r2 
         return z / ((x**2 + y**2) * np.linalg.norm(r1 - r2))
 
     def I2(r1, r2):
-        x, y, z = r1 - r2  # разница векторов
+        x, y, z = r1 - r2  
         num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
         den = 3 * (x**2 + y**2) ** 2 * (np.linalg.norm(r1 - r2)) ** 3
         return num / den

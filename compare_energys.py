@@ -61,9 +61,7 @@ for i, date in enumerate(dates):
     ts = pd.to_datetime(str(date))
     name = ts.strftime("%Y.%m.%d %I:%M%p")
     grid_high = comp_grid_points(
-        grid_empty,
-        points,
-        values,
+        grid_empty,points,values,
         checkpoints=15,
         timestamp=True,
         alert=True,

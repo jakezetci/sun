@@ -107,7 +107,28 @@ def bitmaps_to_points(
     TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
     returnhdr=False
 ):
+    """
+    takes data from bitmaps and returns them as a 2d array of coordinates and B-values
 
+    Parameters
+    ----------
+    TIME : str or np.datetime64
+        time parsed to Fido attributes, the data is downloaded of this timestamp
+    onlyactive : bool, optional
+        if True, only accounts for bitmap points == 34. if False, also takes bitmap==33
+    downloaded : bool, optional
+        if True, ignores TIME and takes paths in magnetogram, bitmaps instead
+    magnetogram,  bitmaps : str, optional
+        filepath for magnetograms and bitmaps.
+    returnhdr : bool, optional
+        if True, adds headers and center coors for
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     def area_simple(xindex, yindex):
         xindex = xindex - centerX
         yindex = yindex - centerY
