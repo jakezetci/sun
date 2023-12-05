@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+cpp_module.egg-info/PKG-INFO
+cpp_module.egg-info/SOURCES.txt
+cpp_module.egg-info/dependency_links.txt
+cpp_module.egg-info/not-zip-safe
+cpp_module.egg-info/requires.txt
+cpp_module.egg-info/top_level.txt
+src/main.cpp
+tests/test.py
