@@ -36,7 +36,8 @@ def test_dipolelatlon(
     relative=True,
     timestamps=10,
 ):
-    NN = np.sqrt(iters / ((lattest[1] - lattest[0]) * (lontest[1] - lontest[0])))
+    NN = np.sqrt(
+        iters / ((lattest[1] - lattest[0]) * (lontest[1] - lontest[0])))
     n = int(NN * (lattest[1] - lattest[0]))
     m = int(NN * (lontest[1] - lontest[0]))
     iters = n * m
@@ -77,7 +78,8 @@ def test_dipolelatlon(
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d) / B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f"value {i} / {iters} done in {toc - tic:0.2f} seconds")
@@ -148,7 +150,8 @@ def test_pointlatlon(
     rRelative=10000,
     timestamps=10,
 ):
-    NN = np.sqrt(iters / ((lattest[1] - lattest[0]) * (lontest[1] - lontest[0])))
+    NN = np.sqrt(
+        iters / ((lattest[1] - lattest[0]) * (lontest[1] - lontest[0])))
     n = int(NN * (lattest[1] - lattest[0]))
     m = int(NN * (lontest[1] - lontest[0]))
     iters = n * m
@@ -189,7 +192,8 @@ def test_pointlatlon(
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d) / B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f"value {i} / {iters} done in {toc - tic:0.2f} seconds")
@@ -290,7 +294,8 @@ def test_borders(
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d) / B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f"value {i} / {iters} done in {toc - tic:0.2f} seconds")
@@ -318,7 +323,8 @@ def test_borders(
             gapx=1.0,
             gapy=0.5,
         )
-    error_size.plot(size_array, mse_array, "o", ms=6, label=f"size min ={sizemin:.2f}")
+    error_size.plot(size_array, mse_array, "o", ms=6,
+                    label=f"size min ={sizemin:.2f}")
     error_size.legend(loc="best", fontsize="x-large")
 
     return (
@@ -376,7 +382,8 @@ def test_density(
             mse_array[i] = mape(B_c, B_d)
             mse_xyz_array[i] = np.abs((B_c - B_d) / B_d)
         else:
-            mse_array[i], mse_xyz_array[i] = mse(B_c, B_d), np.sqrt(np.abs(B_c - B_d))
+            mse_array[i], mse_xyz_array[i] = mse(
+                B_c, B_d), np.sqrt(np.abs(B_c - B_d))
         if i % timestamps == 0:
             toc = time.perf_counter()
             print(f"value {i} / {iters} done in {toc - tic:0.2f} seconds")
