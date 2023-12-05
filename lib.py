@@ -8,8 +8,9 @@ import numpy as np
 import math
 import pandas as pd
 from dataclasses import dataclass
+from numba import jit
 
-
+import time
 try:
 
     from coordinates import Coordinates
@@ -70,7 +71,7 @@ def find_nearest(array, point, R=696340 * 1e3):
     return array[idx], idx
 
 
-def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
+def GreenBl(r1, r2, a=696340 * 1000, vector_method=False, debug=False):
     """
     Computes Green`s function based on Sadykov-Zimovets work
     This is a readable version with formuale being consistent with the article
@@ -92,11 +93,11 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     """
 
     def I1(r1, r2):
-        x, y, z = r1 - r2 
+        x, y, z = r1 - r2
         return z / ((x**2 + y**2) * np.linalg.norm(r1 - r2))
 
     def I2(r1, r2):
-        x, y, z = r1 - r2  
+        x, y, z = r1 - r2
         num = z * (3 * x**2 + 3 * y**2 + 2 * z**2)
         den = 3 * (x**2 + y**2) ** 2 * (np.linalg.norm(r1 - r2)) ** 3
         return num / den
@@ -176,6 +177,9 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
     else:
         i1, i2, i3 = I1(r1, r2), I2(r1, r2), I3(r1, r2)
         li1, li2, li3 = lI1(r1, r2), lI2(r1, r2), lI3(r1, r2)
+        ili1 = i1 - li1
+        ili2 = i2 - li2
+        ili3 = i3 - li3
         G1 = 2 * x1 * (i1 - li1) - 3 * x * (
             (x1**2 + y1**2 - a**2) * (i2 - li2) + (i3 - li3)
         )
@@ -183,12 +187,57 @@ def GreenBl(r1, r2, a=696340 * 1000, vector_method=False):
             (x1**2 + y1**2 - a**2) * (i2 - li2) + (i3 - li3)
         )
         G3 = (np.linalg.norm(r1) ** 2 - a**2) / (np.linalg.norm(r1 - r2) ** 3)
+
     return np.array([G1, G2, G3]) / (4 * np.pi * a)
+
+
+def Green_optimized(r1, r2, a=696300*1e3):
+
+    def I1():
+        return z / (x_sqr_y_sqr * r_diff_norm)
+
+    def I2():
+        num = z * (3 * x_sqr_y_sqr + 2 * z*z)
+        den = 3 * x_sqr_y_sqr**2 * r_diff_norm**3
+        return num / den
+
+    def I3():
+        num = (
+            (-2 * (x_sqr_y_sqr**2) * z2)
+            + (x_sqr_y_sqr * (z**3 + 3 * (z2*z2) * z))
+            - 2 * (z2*z2) * -(z**3)
+        )
+        den = 3 * x_sqr_y_sqr**2 * r_diff_norm**3
+        return num / den
+
+    def lI1():
+        return 1/x_sqr_y_sqr
+
+    def lI2():
+        return 2/(3*x_sqr_y_sqr**2)
+
+    def lI3():
+        return (x_sqr_y_sqr + 2*z2**2)/(3*x_sqr_y_sqr**2)
+    G = np.zeros(3)
+    r_diff = r1-r2
+    r_diff_norm = np.linalg.norm(r_diff)
+    x_sqr_y_sqr = np.linalg.norm(r_diff[:2])**2
+    z = r_diff[2]
+    z2 = r2[2]
+    ili1 = I1() - lI1()
+    ili2 = I2() - lI2()
+    ili3 = I3() - lI3()
+    xya = np.linalg.norm(r1[:2])**2 - a**2
+    G[0] = 2 * r1[0] * ili1 - 3 * r_diff[0] * (xya * ili2 + ili3)
+    G[1] = 2 * r1[1] * ili1 - 3 * r_diff[1] * (xya * ili2 + ili3)
+    G[2] = (np.linalg.norm(r1) ** 2 - a**2) / (r_diff_norm ** 3)
+
+    return G / (4 * np.pi * a)
 
 
 def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
-    computes
+        computes
 
     Parameters
     ----------
