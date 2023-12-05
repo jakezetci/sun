@@ -8,7 +8,7 @@ import numpy as np
 import math
 import pandas as pd
 from dataclasses import dataclass
-
+import cpp_module as cpp
 import time
 try:
 
@@ -236,7 +236,7 @@ def Green_optimized(r1, r2, a=696300*1e3):
 
 def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
-        computes
+    computes
 
     Parameters
     ----------
@@ -254,7 +254,7 @@ def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
     B = np.asarray([0.0, 0.0, 0.0], dtype=np.float64)
     for value, point, area in zip(values, points, areas):
-        add = value * np.asarray(GreenBl(r, point)) * area
+        add = value * np.asarray(cpp.green(*r, *point)) * area
         B = B + add
     return B
 
