@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: cpp-module
-Version: 0.0.1
+Version: 0.0.3
 Summary: A test project using pybind11
 Home-page: https://github.com/pybind/cpp_module
 Author: Sylvain Corlay

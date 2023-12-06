@@ -12,6 +12,7 @@ import astropy.units as u
 import os
 import time
 import telebot
+import cpp_module as cpp
 
 try:
     from coordinates import Coordinates, xyR2xyz
@@ -348,7 +349,7 @@ def comp_grid_points(
     tic = time.perf_counter()
     for i in range(grid.progress, grid.num):
         r1 = grid.coors_set[i]
-        value = B_comp(r1, values, points)
+        value = cpp.b_comp(r1, values, points)
         grid.set_value(value, index=i, vector=True)
         grid.progress1()
         if i % checkpointsnum == 0:
@@ -473,8 +474,8 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
     tic = time.perf_counter()
     print(f'total values = {grid.num}')
     for i, xyz in enumerate(grid.xyz):
-
-        B = B_comp(xyz, values, points, areas)
+        
+        B = cpp.b_comp(xyz, values, points, areas)
         energy = energy + (np.linalg.norm(B)**2 * basic_volume)/(8*np.pi)
         if i % timestamp == 0:
             toc = time.perf_counter()

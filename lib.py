@@ -237,7 +237,8 @@ def Green_optimized(r1, r2, a=696300*1e3):
 def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
     computes
-
+    !!! outdated function that uses python for computations!!!
+    !!! use cpp_modiule.b_comp for 2000x better perfmance !!!
     Parameters
     ----------
     r : Coordinates or np.array
@@ -254,7 +255,7 @@ def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
     B = np.asarray([0.0, 0.0, 0.0], dtype=np.float64)
     for value, point, area in zip(values, points, areas):
-        add = value * np.asarray(cpp.green(*r, *point)) * area
+        add = value * np.asarray(GreenBl(r, point)) * area
         B = B + add
     return B
 
@@ -609,13 +610,13 @@ class Magneticline:
         self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
-    def add_value_comp(self, B_map, stoppoint=None, sign=+1):
+    def add_value_comp(self, values, points, areas, stoppoint=None, sign=+1):
         vec = np.asarray(self.values[-1]) * sign
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
             self.points[-1].vector
         )
         new_point = Coordinates(*new_point)
-        val = B_comp_map(new_point, B_map)
+        val = cpp.b_comp(new_point.vector, values, points, areas)
         self.values.append(val)
         self.points.append(new_point)
         self.pointsxyz.append(new_point.vector)

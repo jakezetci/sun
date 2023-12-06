@@ -125,8 +125,7 @@ def bitmaps_to_points(
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    values, points, areas
 
     """
     def area_simple(xindex, yindex):

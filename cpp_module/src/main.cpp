@@ -5,9 +5,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "main.h"
+#include <pybind11/numpy.h>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
+
+namespace py = pybind11;
 using namespace std;
 
 int add(int i, int j) {
@@ -92,18 +95,51 @@ std::array<double,3> GreenBl(double r1x, double r1y, double r1z, double r2x, dou
     return G;
 }
 
+
+
+
+py::array_t<double> B_comp(py::array_t<double> r, py::array_t<double> values, 
+    py::array_t<double> points,py::array_t<double> areas) {
+    py::buffer_info r_buf = r.request(), pts_buf = points.request(), values_buf = values.request(), areas_buf = areas.request();
+    py::array_t<double> result = py::array_t<double>({3});
+    py::buffer_info res_buf = result.request();
+    double *ptr_res = static_cast<double *>(res_buf.ptr);
+    ptr_res[0] = 0.0;
+    ptr_res[1] = 0.0;
+    ptr_res[2] = 0.0;
+    
+    int N = static_cast<int>(values_buf.shape[0]);
+    double *ptr_pts = static_cast<double *>(pts_buf.ptr);
+    double *ptr_values =  static_cast<double *>(values_buf.ptr);
+    double *ptr_areas = static_cast<double *>(areas_buf.ptr);
+    double *ptr_r = static_cast<double *>(r_buf.ptr);
+    double r_x = ptr_r[0];
+    double r_y = ptr_r[1];
+    double r_z = ptr_r[2];
+    double multiplier;
+    std::array< double,3 > G;
+    for(int i = 0; i < N; i++){
+        multiplier = ptr_values[i]*ptr_areas[i];
+        G = GreenBl(r_x, r_y, r_z, ptr_pts[i*3], ptr_pts[i*3+1], ptr_pts[i*3+2]);
+        for (int j = 0; j < 3; j++){
+            ptr_res[j] +=  multiplier * G[j];
+        };
+    }
+
+    return result;
+}
+
 void print(std::array<double, 3Ui64> &r1)
 {
     for (int i = 0; i < 3; i++)
     {
-        cout << r1[i] << " ";
+        std::cout << r1[i] << " ";
     }
 }
 int multiply(int i, int j) {
     return i * j;
 }
 
-namespace py = pybind11;
 
 PYBIND11_MODULE(cpp_module, m) {
     m.doc() = R"pbdoc(
@@ -136,9 +172,14 @@ PYBIND11_MODULE(cpp_module, m) {
 
         Some other explanation about the subtract function.
     )pbdoc");
+
     m.def("green", &GreenBl, R"pbdoc(
         Computes Green's function
     )pbdoc");
+
+    
+
+    m.def("b_comp", &B_comp, "computes the magnetic field");
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
