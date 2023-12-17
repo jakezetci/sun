@@ -192,6 +192,7 @@ def bitmaps_to_points(
             values.append(B)
             areas.append(area_simple(-(xindex-ref1), -(yindex-ref2)))
     if returnhdr:
+        print(np.isnan(values).any())
         return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
     else:
         return np.array(values), np.array(points), np.array(areas)

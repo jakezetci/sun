@@ -238,7 +238,7 @@ def B_comp(r, values: np.array, points: np.array, areas: np.array):
     """
     computes
     !!! outdated function that uses python for computations!!!
-    !!! use cpp_modiule.b_comp for 2000x better perfmance !!!
+    !!! use cpp_modiule.b_comp for 2000x better perfomance !!!
     Parameters
     ----------
     r : Coordinates or np.array
@@ -389,6 +389,7 @@ class Grid:
 
         self.coors_set = [Coordinates(self.r, *ll, latlon=True)
                           for ll in self.latlon]
+        self.xyz = [cs.vector for cs in self.coors_set]
         self.progress = 0
 
     def set_value(
@@ -554,7 +555,8 @@ class Grid3D():
         self.x = xs
         self.y = ys
         self.z = zs
-        self.xyz = list(map(list, zip(xs, ys, zs)))
+        self.xyz = np.asarray([xs, ys, zs]).T
+        self.r = np.linalg.norm(self.xyz, axis=1)
         self.num = np.shape(self.values)[0]
 
     def set_value(self, value, coor=None, ind=None):
@@ -588,6 +590,41 @@ def create_grid(latlim, lonlim, N, r=696340 * 1000, name=False):
     return B_mapempty
 
 
+def create_3Dgrid_upon_2Dgrid(grid: Grid, N, spherical=True):
+    if spherical == False:
+        grid_x, grid_y, grid_z = grid.xyz
+        grid_x_s, grid_y_s, grid_z_s = np.sort(
+            grid_x), np.sort(grid_y), np.sort(grid_z)
+        xs_unique = np.linspace(grid_x_s[0], grid_x_s[1], num=N)
+        ys_unique = np.linspace(grid_y_s[0], grid_y_s[1], num=N)
+        zs_unique = np.linspace(grid_z_s[0], grid_z_s[1], num=N)
+        xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
+        xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
+        basic_volume = ((xs_unique[1]-xs_unique[0]) *
+                        (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
+
+    return Grid3D(xs, ys, zs), basic_volume * 1e6
+
+
+def create_3Dgrid_sph(latlim, lonlim, r_lim, N):
+    rs_unique = np.linspace(r_lim[0], r_lim[1], num=N)
+    lat_unique = np.linspace(latlim[0], latlim[1], num=N)
+    lon_unique = np.linspace(lonlim[0], lonlim[1], num=N)
+    xs = []
+    ys = []
+    zs = []
+    for r in rs_unique:
+        x = r * np.sin(lon_unique * np.pi / 180.) * \
+            np.sin((90 - lat_unique) * np.pi / 180.)
+        z = r * np.cos(lon_unique * np.pi / 180.) * \
+            np.sin((90 - lat_unique) * np.pi / 180.)
+        y = r * np.cos((90 - lat_unique) * np.pi / 180.)
+        xs.append(x), ys.append(y), zs.append(z)
+    basic_volume = (r_lim[1]**3 * np.cos(np.radians(90-latlim[1])) -
+                    r_lim[0]**3*np.sin(np.radians(90-latlim[0]))) / (N**3)
+    return Grid3D(xs, ys, zs), basic_volume * 1e6 * np.radians(lonlim[1]-lonlim[0])
+
+
 class Magneticline:
     def __init__(self, initial_point, initial_value, step):
         self.initial_point = initial_point
@@ -601,7 +638,7 @@ class Magneticline:
     def add_value(self, m, dipolepos=[0, 0, 0], stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
-            self.points[-1].vector
+            self.pointsxyz[-1]
         )
         new_point = Coordinates(*new_point)
         self.values.append(dipolebetter(
@@ -613,7 +650,7 @@ class Magneticline:
     def add_value_comp(self, values, points, areas, stoppoint=None, sign=+1):
         vec = np.asarray(self.values[-1]) * sign
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
-            self.points[-1].vector
+            self.pointsxyz[-1]
         )
         new_point = Coordinates(*new_point)
         val = cpp.b_comp(new_point.vector, values, points, areas)

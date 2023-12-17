@@ -113,8 +113,8 @@ def model_grid(
         name = crtname(name)
 
     checkpointsnum = int(checkpoints)
-    B_map.save_pkl(name=f"checkpoint2 {name}", empty=False, vector=vector)
-    B_map.save_pkl(name=f"checkpoint1 {name}", empty=False, vector=vector)
+    #B_map.save_pkl(name=f"checkpoint2 {name}", empty=False, vector=vector)
+    #B_map.save_pkl(name=f"checkpoint1 {name}", empty=False, vector=vector)
     r = B_map.r
     for i in range(B_map.progress, B_map.num):
         lat, lon = B_map.latlon[i]
@@ -133,13 +133,14 @@ def model_grid(
             vector=vector,
         )
         B_map.progress1()
-        if i % checkpointsnum == 0:
+        """if i % checkpointsnum == 0:
             os.remove(f"{folder}/checkpoint1 {name}.pkl")
             os.replace(
                 f"{folder}/checkpoint2 {name}.pkl", f"{folder}/checkpoint1 {name}.pkl"
             )
             B_map.save_pkl(name=f"checkpoint2 {name}")
-    B_map.save_pkl(name=name)
+            """
+    # B_map.save_pkl(name=name)
     if alert is True:
         alert_bot("модельная сетка посчиталась...")
     if returnobj:
@@ -251,7 +252,7 @@ def model_magneticline(
 
 def comp_magneticline(
     magline: Magneticline,
-    B_map,
+    values, points, areas,
     name=False,
     returnobj=False,
     maxsteps=2000,
@@ -264,7 +265,7 @@ def comp_magneticline(
         start = magline.progress
         tic = time.perf_counter()
         for i in range(start, maxsteps):
-            magline.add_value_comp(B_map, sign=sign)
+            magline.add_value_comp(values, points, areas, sign=sign)
             if i % timestamp == 0:
                 toc = time.perf_counter()
                 print(
@@ -277,7 +278,7 @@ def comp_magneticline(
         start = magline.progress
         tic = time.perf_counter()
         for i in range(start, maxsteps):
-            magline.add_value_comp(B_map, sign=sign)
+            magline.add_value_comp(values, points, areas, sign=sign)
             if i % timestamp == 0:
                 toc = time.perf_counter()
                 print(
@@ -391,9 +392,96 @@ def smart_compute(time, onlyactive=True):
             """
 
 
-def single_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
+def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
                          onlyactive=True, timestamp=100):
+    """calculates energy of one single active region provided
 
+    Args:
+        bitmap_path (_type_): _description_
+        magnetogram_path (_type_): _description_
+        density (int, optional): _description_. Defaults to 5.
+        gap (float, optional): _description_. Defaults to 0.0.
+        onlyactive (bool, optional): _description_. Defaults to True.
+        timestamp (int, optional): _description_. Defaults to 100.
+    """
+
+    def create_3Dgrid(hdr, density):
+
+        pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
+        r_sun = hdr["RSUN_REF"]
+
+        d_pixel = np.mean([pxsizeX, pxsizeY])
+        dOBS = hdr["DSUN_OBS"]
+        d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+        mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
+        ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
+        bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
+
+        pixel_xs = np.linspace(start=ref1, stop=ref1 +
+                               mapsizeX, num=int(mapsizeX/density))
+        pixel_ys = np.linspace(start=ref2, stop=ref2 +
+                               mapsizeY, num=int(mapsizeY/density))
+
+        xs_unique = -(pixel_xs-cX) * d_pixel
+        ys_unique = -(pixel_ys-cY) * d_pixel
+
+        z_num = np.max([mapsizeX, mapsizeY])
+        z_size = z_num*d_pixel
+
+        __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
+                              r_sun)
+        zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*5)))
+
+        xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
+
+        xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
+
+        basic_volume = ((xs_unique[1]-xs_unique[0]) *
+                        (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
+        grid = Grid3D(xs, ys, zs)
+        return grid.xyz, grid.r, basic_volume * 1e6
+
+    values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
+                                                              bitmaps=bitmap_path,
+                                                              magnetogram=magnetogram_path,
+                                                              onlyactive=onlyactive,
+                                                              returnhdr=True)
+
+    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density)
+    energy = 0.0
+    tic = time.perf_counter()
+
+    a = 697000 * 1e3
+    valid_indeces = np.where(r > a)
+    valid_points = xyz[valid_indeces]
+    print(f'total values = {np.shape(valid_indeces)[1]}')
+    for i, vector in enumerate(valid_points[::-1]):
+        B = cpp.b_comp(vector, values, points, areas)
+        if np.isnan(B).any():
+            print(f'alert!! B is nan, i={i}')
+        else:
+            energy = energy + (np.linalg.norm(B)**2 * basic_volume)
+        if i % timestamp == 0:
+            toc = time.perf_counter()
+            print(
+                f"values {i-timestamp} - {i} done in {toc - tic:0.2f} seconds")
+            print(f'energy = {energy:.2}')
+            tic = time.perf_counter()
+    return energy/(8*np.pi)
+
+
+def cpp_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
+                      onlyactive=True, timestamp=100):
+    """actually slower pls do not use it
+
+    Args:
+        bitmap_path (_type_): _description_
+        magnetogram_path (_type_): _description_
+        density (int, optional): _description_. Defaults to 5.
+        gap (float, optional): _description_. Defaults to 0.0.
+        onlyactive (bool, optional): _description_. Defaults to True.
+        timestamp (int, optional): _description_. Defaults to 100.
+    """
     def create_3Dgrid(hdr, density):
 
         pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
@@ -429,40 +517,6 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
                         (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
         return Grid3D(xs, ys, zs), basic_volume * 1e6
 
-    def create_3Dgrid_slow(hdr, density):
-        def vector(ind1, ind2):
-            c = hmimap.pixel_to_world(
-                u.Quantity(ind1, unit="pix"), u.Quantity(
-                    ind2, unit="pix")
-            )
-            return np.array([c.heliocentric.x.value,
-                             c.heliocentric.y.value, c.heliocentric.z.value])
-
-        mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
-        z_num = np.max([mapsizeX, mapsizeY])
-
-        ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
-        bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
-
-        center = vector(bitmapcenterX, bitmapcenterY)
-        corner = vector(ref1, ref2)
-        x_del, y_del, z_del = center - corner
-        z_del = np.max([np.abs(x_del), np.abs(y_del)])
-        x_unique = np.linspace(start=corner[0], stop=center[0]+x_del,
-                               num=int(mapsizeX/density))
-        y_unique = np.linspace(start=corner[1], stop=center[1]+y_del,
-                               num=int(mapsizeY/density))
-        z_unique = np.linspace(start=center[2], stop=center[2]+z_del*2,
-                               num=int(z_num/density))
-
-        xs, ys, zs = np.meshgrid(x_unique, y_unique, z_unique)
-
-        xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
-
-        basic_volume = ((x_unique[1]-x_unique[0]) *
-                        (y_unique[1]-y_unique[0])*(z_unique[1]-z_unique[0]))
-        return Grid3D(xs, ys, zs), basic_volume * 1e6
-
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
                                                               magnetogram=magnetogram_path,
@@ -470,18 +524,11 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
                                                               returnhdr=True)
 
     grid, basic_volume = create_3Dgrid(hdrs[0], density)
-    energy = 0
+
     tic = time.perf_counter()
     print(f'total values = {grid.num}')
-    for i, xyz in enumerate(grid.xyz):
-        
-        B = cpp.b_comp(xyz, values, points, areas)
-        energy = energy + (np.linalg.norm(B)**2 * basic_volume)/(8*np.pi)
-        if i % timestamp == 0:
-            toc = time.perf_counter()
-            print(
-                f"values {i-timestamp} - {i} done in {toc - tic:0.2f} seconds")
-            tic = time.perf_counter()
+    energy = cpp.energy(grid.xyz, basic_volume, values,
+                        points, areas, timestamp)
     return energy
 
 
@@ -490,6 +537,10 @@ def compute_grid_energy(grid: Grid):
     for value, area in zip(grid.valuesvector, grid.area):
         energy = energy + np.linalg.norm(value) * area
     return energy
+
+
+def model_grid3D():
+    pass
 
 
 if __name__ == "__main__":
