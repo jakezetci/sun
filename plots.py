@@ -23,7 +23,7 @@ def config(
     gapx=0.0,
     gapy=0.0,
     grid=True,
-    figsize=(16, 9),
+    figsize=(12, 6),
     dpi=100,
 ):
     """
@@ -77,10 +77,9 @@ def config(
 
     ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
     ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
-
     ax.tick_params(which="both", width=2)
-    ax.tick_params(which="major", labelsize="large")
-    ax.tick_params(which="minor", labelsize="large", color="c")
+    ax.tick_params(which="major", labelsize="medium")
+    ax.tick_params(which="minor", labelsize="medium", color="c")
 
     plt.xticks(fontname="HSE Slab")
     plt.yticks(fontname="HSE Slab")
@@ -88,9 +87,9 @@ def config(
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
 
-    ax.set_ylabel(ylabel, fontsize="xx-large", fontname="HSE Slab")
-    ax.set_xlabel(xlabel, fontsize="xx-large", fontname="HSE Slab")
-    ax.set_title(title, fontsize="x-large", fontname="HSE Slab")
+    ax.set_ylabel(ylabel, fontsize="large", fontname="HSE Slab")
+    ax.set_xlabel(xlabel, fontsize="large", fontname="HSE Slab",)
+    ax.set_title(title, fontsize="large", fontname="HSE Slab")
     if logscalex:
         ax.set_xscale("log")
     if logscaley:
@@ -203,11 +202,13 @@ def disk(
     ax,
     latlim=(-90, 90),
     lonlim=(-90, 90),
-    n_lines=5,
+    n_linesx=5,
+    n_linesy=5,
     r=696340 * 1e3,
     color="dimgrey",
     lw=0.8,
     ignoretop=False,
+    ignorecorners=0
 ):
     """
     plots a latitude-longitude grid of a sphere on axes
@@ -233,8 +234,8 @@ def disk(
         True if you need to remove annotations at top, by default False
     """
 
-    lat_set = np.linspace(latlim[0], latlim[1], n_lines)
-    lon_set = np.linspace(lonlim[0], lonlim[1], n_lines)
+    lat_set = np.linspace(latlim[0], latlim[1], n_linesy)
+    lon_set = np.linspace(lonlim[0], lonlim[1], n_linesx)
     lat_big = np.radians(90 - np.linspace(latlim[0], latlim[1]))
     lon_big = np.radians(np.linspace(lonlim[0], lonlim[1]))
 
@@ -250,21 +251,22 @@ def disk(
         ax.plot(xx, yy, "-.", linewidth=lw, color=color)
         arg_min, arg_max = np.argmin(yy), np.argmax(yy)
         if i == 0:
-            rotationnum = math.atan((yy[2] - yy[0]) / (xx[2] - xx[0]))
-            rotationnum = math.degrees(rotationnum) + 180
-        elif i == n_lines - 1:
-            ax.annotate(
-                f"{one:.1f}",
-                xy=(xx[arg_min], yy[arg_min]),
-                fontsize="small",
-                color=color,
-            )
+            rotationnum = math.atan((yy[1] - yy[0]) / (xx[1] - xx[0]))
+            rotationnum = math.degrees(rotationnum) + 18
+        elif i == n_linesx - 1:
+            # ax.annotate(f"{one:.1f}", xy=(xx[arg_min], yy[arg_min]),
+            #   fontsize="medium",
+            #  color=color,
+            # )
+            pass
 
+        elif i > (n_linesx - ignorecorners-1):
+            pass
         else:
             ax.annotate(
                 f"{one:.1f}",
                 xy=(xx[arg_min], yy[arg_min]),
-                fontsize="small",
+                fontsize="x-small",
                 color=color,
                 xytext=(0, -1),
                 textcoords="offset fontsize",
@@ -274,7 +276,7 @@ def disk(
                     f"{one:.1f}",
                     xy=(xx[arg_max], yy[arg_max]),
                     color=color,
-                    fontsize="small",
+                    fontsize="x-small",
                     xytext=(0, 0.5),
                     textcoords="offset fontsize",
                 )
@@ -293,7 +295,7 @@ def disk(
             ax.annotate(
                 "longitudes",
                 xy=(xx[arg_min], yy[arg_min]),
-                fontsize="medium",
+                fontsize="x-small",
                 color=color,
                 xytext=(0, -1),
                 textcoords="offset fontsize",
@@ -302,9 +304,9 @@ def disk(
                 "latitudes",
                 xy=(xx[arg_min], yy[arg_min]),
                 color=color,
-                fontsize="medium",
+                fontsize="x-small",
                 ha="right",
-                rotation=rotationnum,
+                rotation=90,
                 xytext=(-0.5, 0),
                 textcoords="offset fontsize",
             )
@@ -313,7 +315,7 @@ def disk(
             ax.annotate(
                 f"{one:.1f}",
                 xy=(xx[arg_min], yy[arg_min]),
-                fontsize="small",
+                fontsize="x-small",
                 color=color,
                 xytext=(-3, 0),
                 textcoords="offset fontsize",
@@ -322,7 +324,7 @@ def disk(
                 f"{one:.1f}",
                 xy=(xx[arg_max], yy[arg_max]),
                 color=color,
-                fontsize="small",
+                fontsize="x-small",
                 xytext=(1, 0),
                 textcoords="offset fontsize",
             )
@@ -335,9 +337,11 @@ def plotmap(
     every=1,
     ms=0.5,
     alpha=1,
-    n_lines=1,
+    n_linesx=1,
+    n_linesy=1,
     lw=0.8,
     ignoretop=False,
+    ignorecorners=3,
     **configargs,
 ):
     """
@@ -374,8 +378,9 @@ def plotmap(
         matplotlib.figure.Figure, matplotlib.axes.Axes
     """
     N = int(np.size(np.unique(B_map.lon)))
-    if n_lines > N:
-        n_lines = N
+    if n_linesx > N or n_linesy > N:
+        n_linesx = N
+        n_linesy = N
 
     latlims = [B_map.lat.min(), B_map.lat.max()]
     lonlims = [B_map.lon.min(), B_map.lon.max()]
@@ -392,8 +397,11 @@ def plotmap(
                 s = val
                 xx[i // every], yy[i // every], sq[i // every] = x, y, s
         sc = ax.scatter(xx, yy, c=sq, s=ms, cmap="inferno", alpha=alpha)
-        cbar = fig.colorbar(sc)
-        cbar.ax.set_ylabel("magnetic field z-value in Mx/cm2", rotation=270)
+        cbar = fig.colorbar(sc, location='bottom', shrink=0.6, aspect=50,
+                            pad=0.0001)
+        cbar.ax.set_xlabel("лучевая компонента магнитного поля, Гаусс",
+                           size='medium')
+        cbar.ax.tick_params(labelsize='small', direction='in')
     else:
         xx = np.zeros(n)
         yy = np.zeros(n)
@@ -409,6 +417,6 @@ def plotmap(
             xx[i], yy[i], uu[i], vv[i] = x, y, u, v
             cc[i] = math.sqrt(u**2 + v**2)
         ax.quiver(xx, yy, uu, vv, np.arctan2(vv, uu))
-    mode(ax, latlims, lonlims, n_lines=n_lines,
-         r=B_map.r, lw=lw, ignoretop=ignoretop)
+    mode(ax, latlims, lonlims, n_linesx=n_linesx, n_linesy=n_linesy,
+         r=B_map.r, lw=lw, ignoretop=ignoretop, ignorecorners=ignorecorners)
     return fig, ax

@@ -45,7 +45,9 @@ def dipolebetter(
     """
     r класса Coordinates, m вектор (x, y, z) в системе садыкова
     """
-    r = Coordinates(*(r.vector - rdipole))
+    if type(r) == Coordinates:
+        r = r.vector
+    r = Coordinates(*(r - rdipole))
     c = mu / (4 * math.pi * r.r**5)
     m = np.asarray(dipolemoment)
     rm = np.inner(r.vector, m)

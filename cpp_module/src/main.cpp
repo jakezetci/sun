@@ -6,6 +6,26 @@
 #include <pybind11/stl.h>
 #include "main.h"
 #include <pybind11/numpy.h>
+#include <time.h>
+#include <ctime>
+#include <chrono>
+#include "lib.h"
+
+class Timer
+{
+public:
+    Timer() : beg_(clock_::now()) {}
+    void reset() { beg_ = clock_::now(); }
+    double elapsed() const { 
+        return std::chrono::duration_cast<second_>
+            (clock_::now() - beg_).count(); }
+
+private:
+    typedef std::chrono::high_resolution_clock clock_;
+    typedef std::chrono::duration<double, std::ratio<1> > second_;
+    std::chrono::time_point<clock_> beg_;
+};
+
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -15,45 +35,6 @@ using namespace std;
 
 int add(int i, int j) {
     return i + j;
-}
-
-
-double norm(std::array<double, 3Ui64> &r_diff) {
-    return std::sqrt(r_diff[0]*r_diff[0] + r_diff[1]*r_diff[1] + r_diff[2]*r_diff[2]);
-}
-
-double I1(double z, double x_sqr_y_sqr, double r_diff_norm) {
-    return z / (x_sqr_y_sqr * r_diff_norm);
-}
-
-double I2(double z, double x_sqry_sqr, double r_diff_norm) {
-
-    double num = z * ( 3 * x_sqry_sqr + 2 * z*z);
-    double den = 3 * x_sqry_sqr * x_sqry_sqr *r_diff_norm*r_diff_norm*r_diff_norm;
-    return num / den;
-}
-
-double I3(double z, double x_sqry_sqr, double r_diff_norm, double z2){
-    double num = (
-            (-2 * (x_sqry_sqr*x_sqry_sqr) * z2)
-            + (x_sqry_sqr * (z*z*z + 3 * (z2*z2) * z))
-            - 2 * (z2*z2) * -(z*z*z)
-        );
-
-    double den = 3 * x_sqry_sqr*x_sqry_sqr * r_diff_norm*r_diff_norm*r_diff_norm;
-    return num / den;
-}
-
-double lI1(double x_sqry_sqr){
-    return 1/x_sqry_sqr;
-}
-
-double lI2(double x_sqry_sqr){
-    return 2/(3*x_sqry_sqr*x_sqry_sqr);
-}
-
-double lI3(double x_sqry_sqr, double z2){
-    return (x_sqry_sqr + 2*z2*z2)/(3*x_sqry_sqr*x_sqry_sqr);
 }
 
 
@@ -129,6 +110,43 @@ py::array_t<double> B_comp(py::array_t<double> r, py::array_t<double> values,
     return result;
 }
 
+
+
+double bitmap_energy(py::array_t<double> xyz, double volume, py::array_t<double> values, 
+    py::array_t<double> points,py::array_t<double> areas, int timestamp = 10){
+    py::buffer_info xyz_buf = xyz.request();
+    double *ptr_xyz = static_cast<double *>(xyz_buf.ptr);
+    int N = static_cast<int>(xyz_buf.shape[0]);
+
+    py::array_t<double> r = py::array_t<double>({3});
+    py::buffer_info r_buf = r.request();
+    double *ptr_r = static_cast<double *>(r_buf.ptr);
+    double energy = 0.0;
+    py::array_t<double> B = py::array_t<double>({3});
+    py::buffer_info B_buf = B.request();
+
+    Timer tmr;
+    
+    for(int i = 0; i < N; i++){
+        ptr_r[0] = ptr_xyz[i*3];
+        ptr_r[1] = ptr_xyz[i*3+1];
+        ptr_r[2] = ptr_xyz[i*3+2];
+        B = B_comp(r, values, points, areas);
+        double B_norm = norm_np_sq(B);
+        energy += B_norm * volume /(8*std::numbers::pi);
+        if (i % timestamp == 0){
+            if (i != 0){
+                double t = tmr.elapsed();
+                std::cout << "Values " << i-timestamp << "-"<< i << " done in ";
+                std::cout << t << " seconds" << std::endl;
+                tmr.reset();
+            };
+        
+        };
+    };
+    return energy;
+}
+
 void print(std::array<double, 3Ui64> &r1)
 {
     for (int i = 0; i < 3; i++)
@@ -180,6 +198,7 @@ PYBIND11_MODULE(cpp_module, m) {
     
 
     m.def("b_comp", &B_comp, "computes the magnetic field");
+    m.def("energy", &bitmap_energy, "gaga");
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

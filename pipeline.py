@@ -129,8 +129,7 @@ def bitmaps_to_points(
 
     """
     def area_simple(xindex, yindex):
-        xindex = xindex - centerX
-        yindex = yindex - centerY
+
         tic = time.perf_counter()
         tan_dif = (np.arctan2(yindex + 1, xindex + 1) -
                    np.arctan2(yindex, xindex))
@@ -138,7 +137,7 @@ def bitmaps_to_points(
         sqr2 = np.sqrt(1 - d_r_ratio * ((xindex + 1) ** 2 + (yindex + 1) ** 2))
         toc = time.perf_counter()
         area = np.abs(tan_dif * (sqr1 - sqr2) * r_sun**2)
-        #print(f'{toc-tic:.4} sec, {area}')
+        # print(f'{toc-tic:.4} sec, {area}')
         return area
 
     if downloaded is False:
@@ -172,17 +171,17 @@ def bitmaps_to_points(
         if returnhdr:
             headers.append(hdrbitmap)
         ref1, ref2 = int(hdrbitmap["CRPIX1"]), int(hdrbitmap["CRPIX2"])
-        #plt.plot(ref1, ref2, 'o', ms=12)
+        # plt.plot(ref1, ref2, 'o', ms=12)
         active_indeces = np.argwhere(databitmap == 34)
         if onlyactive is False:
             quiet_indeces = np.argwhere(databitmap == 33)
             active_indeces = np.vstack([active_indeces, quiet_indeces])
         active_onmap = bitmap_pixel_to_map(active_indeces, ref1, ref2)
         for xindex, yindex in active_indeces:
-            #plt.plot(yindex, xindex, 'o', ms=4, color='pink')
+            # plt.plot(yindex, xindex, 'o', ms=4, color='pink')
             tic = time.perf_counter()
             B = dataMap[xindex+ref2, yindex+ref1]
-            x_corr, y_corr = -(xindex+ref1 - centerX), -(yindex+ref2 - centerY)
+            x_corr, y_corr = -(yindex+ref1 - centerX), -(xindex+ref2 - centerY)
 
             x, y = d_pixel * x_corr, d_pixel * y_corr
 
@@ -190,7 +189,7 @@ def bitmaps_to_points(
             toc = time.perf_counter()
 
             values.append(B)
-            areas.append(area_simple(-(xindex-ref1), -(yindex-ref2)))
+            areas.append(area_simple(x_corr, y_corr))
     if returnhdr:
         print(np.isnan(values).any())
         return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)

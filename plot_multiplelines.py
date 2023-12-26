@@ -22,10 +22,10 @@ dipolelat, dipolelon = 60, 30
 
 phi, theta = ll2pt(60, 30)
 
-alerts = True
+alerts = False
 computed = False
 
-m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e5
+m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e5*1e27
 pos = Coordinates(600000*1e3, dipolelat, dipolelon, latlon=True)
 pos = pos.vector
 
@@ -42,26 +42,30 @@ if computed == False:
 else:
     pass
 
-steps = 1000
-xmin, xmax = -1e4*1e3, 5.5e5*1e3
-ymin, ymax = 4.4e5*1e3, 7.4e5*1e3
+steps = 10000
+xmin, xmax = 1.7*1e3, 3.9e5*1e3
+ymin, ymax = 5.665e5*1e3, 7.4e5*1e3
 computed = True
 if computed == True:
-    with open('Lmaps/Диполь 60, 30 closeup.pkl', 'rb') as fmap:
+    with open('Lmaps/Диполь 60, 30 closeup22.pkl', 'rb') as fmap:
         picturemap = pickle.load(fmap)
-    fig, ax = plotmap(picturemap, n_lines=21, alpha=0.6, lw=1.5, xlabel='X, km', ylabel='Y, km',
-                      title='Magnetic lines of a dipole at (60,30)', ignoretop=True,
-                      xlimit=[xmin, xmax], ylimit=[ymin, ymax])
+    fig, ax = plotmap(picturemap, n_linesx=17, n_linesy=9, alpha=0.6, lw=0.6, xlabel='X, m', ylabel='Y, m',
+                      title='Магнитные линии диполя на координатах (60,30)', ignoretop=True,
+                      ignorecorners=5,
+                      xlimit=[xmin, xmax], ylimit=[ymin, ymax],
+                      dpi=140,
+                      figsize=(5.6, 5.6),
+                      grid=False)
 else:
-    latmax, latmin, lonmax, lonmin = 80, 40, 85, 5
-    fig, ax = create_model_plotmap([latmin, latmax], [lonmin, lonmax], N=10, M=m,
-                                   dipolepos=pos, name='Диполь 60, 30 closeup', lines=20, alpha=0.6, lw=1.5,
+    latmax, latmin, lonmax, lonmin = 80, 40, 80, 10
+    fig, ax = create_model_plotmap([49, 89], [-10, 80], N=10, M=m,
+                                   dipolepos=pos, name='Диполь 60, 30 closeup22', lines=20, alpha=0.6, lw=1.5,
                                    vector=False, xlabel='X, km', ylabel='Y, km',
                                    title='Magnetic lines of a dipole at (60,30)')
 
 
-points = [[60, 36],]  # [59, 38], [58, 32]
-colors = ['green',]  # 'pink', 'cyan']
+points = [[60, 36], [59, 38], [58, 32]]
+colors = ['#029C63',  '#F6C3C3', '#11A0D7']
 
 
 computed = True
@@ -71,17 +75,17 @@ if computed == False:
         point = Coordinates(696440*1e3, lat, lon, latlon=True)
         in_value = dipolebetter(point, dipolemoment=m,
                                 rdipole=pos, returnxyz=True)
-        line_model = Magneticline(point, in_value, step=300*1e3)
-        line_comp = Magneticline(point, in_value, step=600*1e3)
+        line_model = Magneticline(point, in_value, step=30*1e3)
+        line_comp = Magneticline(point, in_value, step=60*1e3)
         line_model = model_magneticline(line_model, m, pos, returnobj=True,
                                         name=f'presentable model line {lat} {lon}', maxsteps=steps,
                                         timestamp=1000, alert=alerts, stoppoint=696000*1e3)
-        line_comp = comp_magneticline(line_comp, Lmap, returnobj=True,
+        line_comp = comp_magneticline(line_comp, Lmap.values, Lmap.xyz, Lmap.area, returnobj=True,
                                       name=f'presentable comp line {lat} {lon}', maxsteps=steps,
                                       timestamp=100, alert=alerts, stoppoint=696000*1e3)
 
-        xx_model, yy_model, zz_model = np.array(line_model.pointsxyz).T
-        xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T
+        xx_model, yy_model, zz_model = np.array(line_model.points).T
+        xx_comp, yy_comp, zz_comp = np.array(line_comp.points).T
         ax.plot(xx_model, yy_model, '--', color=colors[i],
                 label=f'model line {i+1}', lw=2)
         ax.plot(xx_comp, yy_comp, '-', color=colors[i],
@@ -92,12 +96,12 @@ else:
             line_model = pickle.load(f_model)
         with open(f'maglines/presentable comp line {lat} {lon}.pkl', 'rb') as f_comp:
             line_comp = pickle.load(f_comp)
-        xx_model, yy_model, zz_model = np.array(line_model.pointsxyz).T
-        xx_comp, yy_comp, zz_comp = np.array(line_comp.pointsxyz).T
+        xx_model, yy_model, zz_model = np.array(line_model.points).T
+        xx_comp, yy_comp, zz_comp = np.array(line_comp.points).T
         ax.plot(xx_model, yy_model, '--', color=colors[i],
-                label=f'model line {i+1}', lw=2)
+                lw=1.5)
         ax.plot(xx_comp, yy_comp, '-', color=colors[i],
-                label=f'computed line {i+1}', lw=2)
+                lw=1.5)
         xmax_line, ymax_line = np.max(np.hstack([xx_model, xx_comp])), np.max(
             np.hstack([yy_model, yy_comp]))
         xmin_line, ymin_line = np.min(np.hstack([xx_model, xx_comp])), np.min(
@@ -110,9 +114,11 @@ else:
             ymin = ymin_line
         if xmin_line < xmin:
             xmin = xmin_line
+ax.plot([], [], '--', label='модельные линии поля диполя', color='black')
+ax.plot([], [], '-', label='подсчитанные нашим методом линии', color='black')
 
 
-ax.legend(loc='best', fontsize='x-large')
+ax.legend(loc='best', fontsize='medium')
 
 if alerts:
     rand = np.random.randint(10, 99)

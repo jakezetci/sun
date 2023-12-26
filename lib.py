@@ -627,36 +627,33 @@ def create_3Dgrid_sph(latlim, lonlim, r_lim, N):
 
 class Magneticline:
     def __init__(self, initial_point, initial_value, step):
+        if type(initial_point) == Coordinates:
+            initial_point = initial_point.vector
         self.initial_point = initial_point
         self.initial_value = initial_value
         self.points = [initial_point]
         self.values = [initial_value]
-        self.pointsxyz = [initial_point.vector]
         self.step = step
         self.progress = 0
 
     def add_value(self, m, dipolepos=[0, 0, 0], stoppoint=None):
         vec = np.asarray(self.values[-1])
         new_point = (vec * self.step / np.linalg.norm(vec)) + np.asarray(
-            self.pointsxyz[-1]
+            self.points[-1]
         )
-        new_point = Coordinates(*new_point)
         self.values.append(dipolebetter(
             new_point, m, dipolepos, returnxyz=True))
         self.points.append(new_point)
-        self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
     def add_value_comp(self, values, points, areas, stoppoint=None, sign=+1):
         vec = np.asarray(self.values[-1]) * sign
         new_point = vec * self.step / np.linalg.norm(vec) + np.asarray(
-            self.pointsxyz[-1]
+            self.points[-1]
         )
-        new_point = Coordinates(*new_point)
-        val = cpp.b_comp(new_point.vector, values, points, areas)
+        val = cpp.b_comp(new_point, values, points, areas)
         self.values.append(val)
         self.points.append(new_point)
-        self.pointsxyz.append(new_point.vector)
         self.progress = self.progress + 1
 
     def line_by_length(self, func, length, *args):
