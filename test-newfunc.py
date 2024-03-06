@@ -17,35 +17,54 @@ bitmap_path = [
 magnetogram_path = [
     r'C:\Users\cosbo\sunpy\data\hmi.m_720s.20110215_000000_TAI.1.magnetogram.fits']
 
-density = 4.7
-day = 13
-N = 4
-dates = pd.date_range(start=f"2011-02-{day} 12:00:00",
-                      freq="3H", periods=N).values
+density = 2.5
+day = 12
+N = 72
+"""
+missing - 2011-02-12T12:00:00
+2011-02-14T00:00:00
+2011-02-14T01:00:00
+2011-02-14T00:00:00
+2011-02-14T17:00:00
 
-np.savetxt(f'dates_11158_{day}_dens{density}_slow_3.txt', dates, fmt='%s')
-try:
-    energys = np.loadtxt(
-        f'energys_11158_density={density}, day={day}_slow_3.txt')
-except:
-    energys = []
-print(energys)
-start = len([energys])
-for i in range(start, N):
-    date = dates[i]
-    magnetogram_path, bitmap_path = computing.download_map_and_harp(
-        date, date, NOAA_AR=11158)
+"""
+if __name__ == '__main__':
 
-    energy = computing.single_bitmap_energy(bitmap_path, magnetogram_path, density=density,
-                                            timestamp=100000, onlyactive=True)
-    energys = np.append(energys, energy)
+    dates = pd.date_range(start=f"2011-02-{day} 12:00:00",
+                          freq="1h", periods=N).values
 
-    np.savetxt(
-        f'energys_11158_density={density}, day={day}_slow_3.txt', energys)
+    np.savetxt(f'dates_11158_{day}_dens{density}.txt', dates, fmt='%s')
+    try:
+        energys = np.loadtxt(
+            f'energys_11158_density={density}, day={day}.txt')
+    except:
+        energys = []
+    print(energys)
+    start = len(energys)
+    dates = np.datetime_as_string(dates, unit='s')
 
-    date_as_str = np.datetime_as_string(date)
-    print(f'{date} - {energy}')
+    __magnetogram_path, __bitmap_path = computing.download_map_and_harp(
+            dates[0], dates[-1], NOAA_AR=11158)
+    #быстрее выходить скачивать сразу много файлов
+    for i in range(start+1, N):
+        date = dates[i]
+        print(date)
+        try:
+            bitmap_path = [pipeline.file_name(date, 'hmi.mharp_720s')]
+            magnetogram_path = [pipeline.file_name(date, 'hmi.m_720s')]
+        except FileNotFoundError:
+            continue
 
-fig, ax = plots.config(xlabel='date', ylabel='enegry, erg')
-ax.plot(dates, energy, 'o'
-        )
+        energy = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
+                                     onlyactive=True, threads=10, mode='opti')
+        energys = np.append(energys, energy)
+
+        np.savetxt(
+            f'energys_11158_density={density}, day={day}.txt', energys)
+
+        print(f'{date} - {energy}')
+
+    fig, ax = plots.config(xlabel='date', ylabel='enegry, erg')
+    ax.plot(dates, energy, 'o'
+            )
+    plt.show()

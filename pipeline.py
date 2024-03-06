@@ -12,6 +12,8 @@ from sunpy.net import Fido, attrs as a
 import astropy.units as u
 import sunpy.map.sources
 import matplotlib.pyplot as plt
+import urllib
+import os
 
 try:
     from coordinates import xyz2ll, xyR2xyz, Coordinates
@@ -29,6 +31,17 @@ import pandas as pd
 def arcsecs_to_radian(arcsecs):
     return np.radians(arcsecs / 3600)
 
+def file_name(time, series, general_path=r"C:/Users/cosbo/sunpy/data"):
+    time_f = time.replace(':', '').replace('-', '').replace('T', '_')
+
+    
+    files = os.listdir(general_path)
+
+    for file in files:
+        if series in file and time_f in file:
+            return general_path + '/' + file
+    
+    raise FileNotFoundError
 
 def bitmap_pixel_to_map(index, reference1, reference2):
     correction = np.full_like(index, [reference2, reference1])
@@ -283,7 +296,15 @@ def download_map_and_harp(timestart, timeend, **HARPkeywords):
         a.jsoc.Series(series_M),
         a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
     )
-    downloaded_magnetogram = Fido.fetch(res_bitmap).data
+    result = None
+    while result is None:
+        try:
+            downloaded_magnetogram = Fido.fetch(res_bitmap).data
+            result = True
+        except urllib.error.URLError:
+            print('error in downloading')
+            pass
+
 
     HARP_args = [a.Time(timestart, timeend),
                  a.jsoc.Series(series_bitmap),
