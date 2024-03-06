@@ -59,9 +59,10 @@ def __mp_init(shared_data):
 
 
 def mp_energy(bitmap_path, magnetogram_path, density=5,
-           onlyactive=True, threads=mp.cpu_count()):
+           onlyactive=True, threads=mp.cpu_count(), mode='default',
+           track_loc=False):
     """calculates energy of a single active region provided
-    !utilising multiprocessing!
+    !utilising multiprocessing! (about 6 times faster)
 
     Args:
         bitmap_path: _description_
@@ -76,11 +77,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True)
 
-    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
+    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
     energy = 0.0
     a = 697000 * 1e3
     valid_indeces = np.where(r > a)
-    valid_points = xyz[valid_indeces]
+    valid_points = xyz[valid_indeces] 
     shared_data = shared_data_class(values, points, areas)
 
     pool = mp.Pool(processes=threads, 
@@ -90,14 +91,20 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
 
     with tqdm(total=np.shape(valid_indeces)[1], maxinterval=0.1) as pbar:
         for res in pool.imap(__mponecube, valid_points):
-            energy = energy + res
+            if np.isnan(energy):
+                pass
+            else:
+                energy = energy + res
             pbar.update(1)
         pool.close()
         pool.join()
         pbar.update()
         time.sleep(2.0)
-    return energy * basic_volume/(8*np.pi)
+    if track_loc:
 
+        return energy * basic_volume/(8*np.pi), (cX, cY)
+    else:
+        return energy * basic_volume/(8*np.pi)
 
             
 
@@ -145,6 +152,34 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
         pbar.update()
         time.sleep(2.0)
     return energy/(8*np.pi)
+
+def create_3Dgrid(hdr, density, cX, cY):
+
+    pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
+    r_sun = hdr["RSUN_REF"]
+    d_pixel = np.mean([pxsizeX, pxsizeY])
+    dOBS = hdr["DSUN_OBS"]
+    d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+    mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
+    ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
+    bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
+    pixel_xs = np.linspace(start=ref1, stop=ref1 +
+                           mapsizeX, num=int(mapsizeX/density))
+    pixel_ys = np.linspace(start=ref2, stop=ref2 +
+                           mapsizeY, num=int(mapsizeY/density))
+    xs_unique = -(pixel_xs-cX) * d_pixel
+    ys_unique = -(pixel_ys-cY) * d_pixel
+    z_num = np.max([mapsizeX, mapsizeY])
+    z_size = z_num*d_pixel
+    __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
+                          r_sun)
+    zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*5)))
+    xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
+    xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
+    basic_volume = ((xs_unique[1]-xs_unique[0]) *
+                    (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
+    grid = Grid3D(xs, ys, zs)
+    return grid.xyz, grid.r, basic_volume * 1e6
 
 def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
     # N - количество ячеек на градус
@@ -254,13 +289,16 @@ def model_grid(
     if returnobj:
         return B_map
 
-def create_3Dgrid(hdr, density, cX, cY):
+def create_3Dgrid(hdr, density, cX, cY, mode='default'):
+
+
 
     pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
-    r_sun = hdr["RSUN_REF"]
+    r_sun = hdr["RSUN_REF"] 
     d_pixel = np.mean([pxsizeX, pxsizeY])
     dOBS = hdr["DSUN_OBS"]
     d_pixel = arcsecs_to_radian(d_pixel) * dOBS
+    r_sun = r_sun + d_pixel # safe call
     mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
     ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
     bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
@@ -270,11 +308,19 @@ def create_3Dgrid(hdr, density, cX, cY):
                            mapsizeY, num=int(mapsizeY/density))
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
-    z_num = np.max([mapsizeX, mapsizeY])
-    z_size = z_num*d_pixel
-    __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
-                          r_sun)
-    zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*5)))
+    if mode == 'default':
+
+        z_num = np.min([mapsizeX, mapsizeY])
+        z_size = z_num*d_pixel
+        __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
+                              r_sun)
+        zs_unique = np.linspace(z, z+z_size, num=int(z_num//density))
+    elif mode == 'opti':
+        z_num = np.min([mapsizeX, mapsizeY])//3
+        z_size = z_num*d_pixel
+        __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
+                              r_sun)
+        zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*3)))
     xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
     xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
     basic_volume = ((xs_unique[1]-xs_unique[0]) *
@@ -529,7 +575,7 @@ def smart_compute(time, onlyactive=True):
 
 
 def cpp_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
-                      onlyactive=True, timestamp=100):
+                      onlyactive=True):
     """actually slower pls do not use it
 
     Args:
@@ -548,12 +594,12 @@ def cpp_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True)
 
-    grid, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
+    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
 
     tic = time.perf_counter()
     print(f'total values = {grid.num}')
-    energy = cpp.energy(grid.xyz, basic_volume, values,
-                        points, areas, timestamp)
+    energy = cpp.energy(xyz, basic_volume, values,
+                        points, areas, 40000)
     return energy
 
 
