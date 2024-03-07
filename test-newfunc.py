@@ -12,10 +12,7 @@ import cpp_module as cpp
 import pipeline
 import matplotlib.pyplot as plt
 import plots
-bitmap_path = [
-    r'C:\Users\cosbo\sunpy\data\hmi.mharp_720s.377.20110215_000000_TAI.bitmap.fits']
-magnetogram_path = [
-    r'C:\Users\cosbo\sunpy\data\hmi.m_720s.20110215_000000_TAI.1.magnetogram.fits']
+
 
 density = 2.5
 day = 12
@@ -45,7 +42,7 @@ if __name__ == '__main__':
 
     __magnetogram_path, __bitmap_path = computing.download_map_and_harp(
             dates[0], dates[-1], NOAA_AR=11158)
-    #быстрее выходить скачивать сразу много файлов
+    #быстрее выходит скачивать сразу много файлов
     for i in range(start+1, N):
         date = dates[i]
         print(date)

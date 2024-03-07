@@ -11,22 +11,16 @@ import sunpy
 from sunpy.net import Fido, attrs as a
 import astropy.units as u
 import sunpy.map.sources
-import matplotlib.pyplot as plt
 import urllib
 import os
 from collections.abc import Iterable 
 
-try:
-    from coordinates import xyz2ll, xyR2xyz, Coordinates
-    from lib import Grid, B_comp
-    from plots import config
-except ModuleNotFoundError:
-    from sun.coordinates import xyz2ll, xyR2xyz, Coordinates
-    from sun.lib import Grid, B_comp
-    from sun.plots import config
+
+from coordinates import xyz2ll, xyR2xyz, Coordinates
+from lib import Grid, B_comp
+
 import time
 
-import pandas as pd
 
 
 def arcsecs_to_radian(arcsecs):

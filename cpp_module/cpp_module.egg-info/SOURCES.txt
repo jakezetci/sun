@@ -8,4 +8,3 @@ cpp_module.egg-info/not-zip-safe
 cpp_module.egg-info/requires.txt
 cpp_module.egg-info/top_level.txt
 src/main.cpp
-tests/test.py

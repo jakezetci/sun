@@ -7,8 +7,6 @@ Created on Tue Sep 19 21:22:29 2023
 
 import numpy as np
 
-from astropy.io import fits
-import astropy.units as u
 import os
 import time
 import telebot
@@ -20,10 +18,10 @@ from collections import namedtuple
 
 
 from coordinates import Coordinates, xyR2xyz
-from lib import B_comp_map, Grid, create_grid, Magneticline, B_comp, Grid3D
+from lib import B_comp_map, Grid, create_grid, Magneticline, Grid3D
 from field import dipolebetter
-from plots import sphere, disk, plotmap
-from pipeline import download_map_and_harp, bitmaps_to_points, arcsecs_to_radian, bitmaps_to_points_slow
+from plots import plotmap
+from pipeline import bitmaps_to_points, arcsecs_to_radian
 
 try:
     with open("callid.txt") as f:
@@ -133,7 +131,6 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
 
     xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
     energy = 0.0
-    tic = time.perf_counter()
 
     a = 697000 * 1e3
     valid_indeces = np.where(r > a)
@@ -548,32 +545,6 @@ def comp_grid_points(
         return grid
 
 
-def smart_compute(time, onlyactive=True):
-    def create_3Dgrid(header):
-        return Grid3D()
-    magnetogram, bitmap_paths = download_map_and_harp(time, time)
-
-    for bitmap_path in bitmap_paths:
-        bitmap = fits.open(bitmap_path)
-
-        databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
-        ref1, ref2 = hdrbitmap["CRPIX1"], hdrbitmap["CRPIX2"]
-        active_indeces = np.argwhere(databitmap == 34)
-        if onlyactive is False:
-            quiet_indeces = np.argwhere(databitmap == 33)
-            active_indeces = np.vstack([active_indeces, quiet_indeces])
-        correction = np.full_like(active_indeces, [ref1, ref2])
-        active_onmap = active_indeces + correction
-        for xindex, yindex in active_onmap:
-            """
-            B = dataMap[xindex, yindex]
-            x, y = -d_pixel * (xindex - centerX), -d_pixel * (yindex - centerY)
-            points.append(xyR2xyz(x, y, r_sun))
-            values.append(B)
-            """
-
-
-
 def cpp_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
                       onlyactive=True):
     """actually slower pls do not use it
@@ -596,8 +567,7 @@ def cpp_bitmap_energy(bitmap_path, magnetogram_path, density=5, gap=0.0,
 
     xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
 
-    tic = time.perf_counter()
-    print(f'total values = {grid.num}')
+    print(f'total values = {np.shape(xyz)[1]}')
     energy = cpp.energy(xyz, basic_volume, values,
                         points, areas, 40000)
     return energy
@@ -608,10 +578,6 @@ def compute_grid_energy(grid: Grid):
     for value, area in zip(grid.valuesvector, grid.area):
         energy = energy + np.linalg.norm(value) * area
     return energy
-
-
-def model_grid3D():
-    pass
 
 
 if __name__ == "__main__":

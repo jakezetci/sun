@@ -5,10 +5,8 @@ Created on Tue Jul 25 15:58:55 2023
 @author: cosbo
 """
 
-try:
-    from coordinates import Coordinates
-except ModuleNotFoundError:
-    from sun.coordinates import Coordinates
+from coordinates import Coordinates
+
 import math
 import numpy as np
 

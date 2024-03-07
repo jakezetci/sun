@@ -9,15 +9,10 @@ import math
 import pandas as pd
 from dataclasses import dataclass
 import cpp_module as cpp
-import time
-try:
 
-    from coordinates import Coordinates
-    from field import dipolebetter
-except ModuleNotFoundError:
+from coordinates import Coordinates
+from field import dipolebetter
 
-    from sun.field import dipolebetter
-    from sun.coordinates import Coordinates
 
 import pickle
 

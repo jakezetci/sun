@@ -7,10 +7,8 @@ Created on Mon Oct 16 20:30:50 2023
 
 import telebot
 
-try:
-    import computing
-except ModuleNotFoundError:
-    import sun.computing
+import computing
+
 from telebot.util import quick_markup
 
 
