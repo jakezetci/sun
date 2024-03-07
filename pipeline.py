@@ -14,6 +14,7 @@ import sunpy.map.sources
 import matplotlib.pyplot as plt
 import urllib
 import os
+from collections.abc import Iterable 
 
 try:
     from coordinates import xyz2ll, xyR2xyz, Coordinates
@@ -47,73 +48,6 @@ def bitmap_pixel_to_map(index, reference1, reference2):
     correction = np.full_like(index, [reference2, reference1])
     return index+correction
 
-
-def fits_to_Grid(MAP):
-    """
-    thats a very long way to do it.......
-
-    Args:
-        MAP (TYPE): DESCRIPTION.
-
-    Returns:
-        TYPE: DESCRIPTION.
-
-    """
-
-    def get_area(xind: int, yind: int):
-        def get_vector(ind1, ind2):
-            point = MAP.pixel_to_world(
-                u.Quantity(ind1, unit="pix"), u.Quantity(ind2, unit="pix")
-            )
-            vector = np.array(
-                point.heliocentric.x.value,
-                point.heliocentric.y.value,
-                point.heliocentric.z.value,
-            )
-            return vector
-
-        vectorA = get_vector(xind - 1, yind + 1)
-        vectorB = get_vector(xind + 1, yind + 1)
-        vectorC = get_vector(xind + 1, yind - 1)
-        vectorD = get_vector(xind - 1, yind - 1)
-
-        sideAB = np.linalg.norm(vectorA - vectorB)
-        sideBC = np.linalg.norm(vectorB - vectorC)
-        sideCD = np.linalg.norm(vectorC - vectorD)
-        sideDA = np.linalg.norm(vectorD - vectorA)
-
-        diagAC = np.linalg.norm(vectorA - vectorC)
-        diagBD = np.linalg.norm(vectorB - vectorD)
-
-        area = 0.25 * np.sqrt(
-            4 * diagAC**2 * diagBD**2
-            - (sideAB**2 + sideCD**2 - sideBC**2 - sideDA**2) ** 2
-        )
-
-        return area
-
-    data, hdr = MAP[1].data, MAP[1].header
-    MAP = sunpy.map.sources.HMIMap(data, hdr)
-    nonNanindeces = np.argwhere(~np.isnan(data))
-    gridN = nonNanindeces.shape[0]
-    sunlats, sunlons, values, areas, R = np.zeros((5, gridN))
-    for i, (xindex, yindex) in enumerate(nonNanindeces):
-        skycoord = MAP.pixel_to_world(
-            u.Quantity(xindex, unit="pix"), u.Quantity(yindex, unit="pix")
-        )
-        x = skycoord.heliocentric.x.value
-        y = skycoord.heliocentric.y.value
-        z = skycoord.heliocentric.z.value
-        if np.isnan(x) or np.isnan(y) or np.isnan(z):
-            pass
-        else:
-            R[i], (sunlats[i], sunlons[i]) = xyz2ll(x, y, z)
-            values[i] = data[xindex, yindex]
-            areas[i] = get_area(xindex, yindex)
-    returnGrid = Grid(R, sunlats, sunlons, area=areas)
-
-    returnGrid.set_allvalues(values, vector=False)
-    return returnGrid
 
 
 def bitmaps_to_points(
@@ -155,10 +89,14 @@ def bitmaps_to_points(
 
     if downloaded is False:
         magnetogram, bitmaps = download_map_and_harp(TIME, TIME)
-    magnetogram = np.asarray(magnetogram)
-    MAP = fits.open(magnetogram[0])
+    if isinstance(magnetogram, Iterable):
+        magnetogram = np.asarray(magnetogram)
+        MAP = fits.open(magnetogram[0])
+    else:
+        MAP = fits.open(magnetogram)
+
     dataMap, hdrMap = MAP[1].data, MAP[1].header
-    HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
+    #HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
     dOBS = hdrMap["DSUN_OBS"]
     pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
 
@@ -172,12 +110,16 @@ def bitmaps_to_points(
     d_r_ratio = d_r_ratio**2
 
     centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
+
     points = []
     values = []
     areas = []
     if returnhdr:
         headers = []
-    for i, bitmap_path in enumerate(bitmaps):
+
+    if not isinstance(bitmaps, Iterable):
+        bitmaps = [bitmaps]
+    for bitmap_path in bitmaps:
         bitmap = fits.open(bitmap_path)
 
         databitmap, hdrbitmap = bitmap[-1].data, bitmap[-1].header
@@ -418,6 +360,74 @@ def compute_harp_MEnergy(
     centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
 
     return energy_onetime(dataMap, bitmaps)
+
+
+def fits_to_Grid(MAP):
+    """
+    thats a very long way to do it.......
+
+    Args:
+        MAP (TYPE): DESCRIPTION.
+
+    Returns:
+        TYPE: DESCRIPTION.
+
+    """
+
+    def get_area(xind: int, yind: int):
+        def get_vector(ind1, ind2):
+            point = MAP.pixel_to_world(
+                u.Quantity(ind1, unit="pix"), u.Quantity(ind2, unit="pix")
+            )
+            vector = np.array(
+                point.heliocentric.x.value,
+                point.heliocentric.y.value,
+                point.heliocentric.z.value,
+            )
+            return vector
+
+        vectorA = get_vector(xind - 1, yind + 1)
+        vectorB = get_vector(xind + 1, yind + 1)
+        vectorC = get_vector(xind + 1, yind - 1)
+        vectorD = get_vector(xind - 1, yind - 1)
+
+        sideAB = np.linalg.norm(vectorA - vectorB)
+        sideBC = np.linalg.norm(vectorB - vectorC)
+        sideCD = np.linalg.norm(vectorC - vectorD)
+        sideDA = np.linalg.norm(vectorD - vectorA)
+
+        diagAC = np.linalg.norm(vectorA - vectorC)
+        diagBD = np.linalg.norm(vectorB - vectorD)
+
+        area = 0.25 * np.sqrt(
+            4 * diagAC**2 * diagBD**2
+            - (sideAB**2 + sideCD**2 - sideBC**2 - sideDA**2) ** 2
+        )
+
+        return area
+
+    data, hdr = MAP[1].data, MAP[1].header
+    MAP = sunpy.map.sources.HMIMap(data, hdr)
+    nonNanindeces = np.argwhere(~np.isnan(data))
+    gridN = nonNanindeces.shape[0]
+    sunlats, sunlons, values, areas, R = np.zeros((5, gridN))
+    for i, (xindex, yindex) in enumerate(nonNanindeces):
+        skycoord = MAP.pixel_to_world(
+            u.Quantity(xindex, unit="pix"), u.Quantity(yindex, unit="pix")
+        )
+        x = skycoord.heliocentric.x.value
+        y = skycoord.heliocentric.y.value
+        z = skycoord.heliocentric.z.value
+        if np.isnan(x) or np.isnan(y) or np.isnan(z):
+            pass
+        else:
+            R[i], (sunlats[i], sunlons[i]) = xyz2ll(x, y, z)
+            values[i] = data[xindex, yindex]
+            areas[i] = get_area(xindex, yindex)
+    returnGrid = Grid(R, sunlats, sunlons, area=areas)
+
+    returnGrid.set_allvalues(values, vector=False)
+    return returnGrid
 
 
 """
