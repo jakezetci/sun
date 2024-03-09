@@ -18,7 +18,7 @@ from collections import namedtuple
 
 
 from coordinates import Coordinates, xyR2xyz
-from lib import B_comp_map, Grid, create_grid, Magneticline, Grid3D
+from lib import B_comp_map, Grid, create_grid, Magneticline
 from field import dipolebetter
 from plots import plotmap
 from pipeline import bitmaps_to_points, arcsecs_to_radian
@@ -34,6 +34,9 @@ except FileNotFoundError:
 
 shared_data_class = namedtuple(
     'shared_data_class', ['values', 'points', 'areas'])
+
+Grid_nt = namedtuple('Grid3D',
+                      ['xyz', 'r', 'num', 'loc_x', 'loc_y', 'basic_volume'])
 
 def __mponecube(vector):
     global values
@@ -57,17 +60,18 @@ def __mp_init(shared_data):
 
 
 def mp_energy(bitmap_path, magnetogram_path, density=5,
-           onlyactive=True, threads=mp.cpu_count(), mode='default',
-           track_loc=False):
+           onlyactive=True, threads=mp.cpu_count(), mode='default'):
     """calculates energy of a single active region provided
-    !utilising multiprocessing! (about 6 times faster)
+    ! utilising multiprocessing ! (about 6 times faster)
 
     Args:
-        bitmap_path: _description_
-        magnetogram_path: _description_
-        density: _description_. Defaults to 5.
-        onlyactive: _description_. Defaults to True.
-        threads: _description_. Defaults to mp.cpu_count().
+        bitmap_path: bitmap file
+        magnetogram_path: magnetogram file
+        density: pixels in one cube. Defaults to 5.
+        onlyactive: if True, only accounts for bitmap=34. if False, also takes bitmap=33. Defaults to True.
+        threads: number of CPU threads to use. Defaults to all threads.
+        mode: if 'opti' - boosts up the speed by lowering the number of cubes, 
+                if 'track_loc' - also returns the position of the active region
     """
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
@@ -75,18 +79,18 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True)
 
-    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
+    grid = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
     energy = 0.0
     a = 697000 * 1e3
-    valid_indeces = np.where(r > a)
-    valid_points = xyz[valid_indeces] 
+    valid_indeces = np.where(grid.r > a)
+    valid_points = grid.xyz[valid_indeces] 
     shared_data = shared_data_class(values, points, areas)
 
     pool = mp.Pool(processes=threads, 
                    initializer=__mp_init, initargs=(shared_data, ))
     energy = 0.0
+    
     from tqdm import tqdm
-
     with tqdm(total=np.shape(valid_indeces)[1], maxinterval=0.1) as pbar:
         for res in pool.imap(__mponecube, valid_points):
             if np.isnan(energy):
@@ -97,12 +101,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         pool.close()
         pool.join()
         pbar.update()
-        time.sleep(2.0)
-    if track_loc:
-
-        return energy * basic_volume/(8*np.pi), (cX, cY)
+        time.sleep(1.0)
+    if mode == 'track_loc':
+        return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
     else:
-        return energy * basic_volume/(8*np.pi)
+        return energy * grid.basic_volume/(8*np.pi)
 
             
 
@@ -129,12 +132,12 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True)
 
-    xyz, r, basic_volume = create_3Dgrid(hdrs[0], density, cX, cY)
+    grid = create_3Dgrid(hdrs[0], density, cX, cY)
     energy = 0.0
 
     a = 697000 * 1e3
-    valid_indeces = np.where(r > a)
-    valid_points = xyz[valid_indeces]
+    valid_indeces = np.where(grid.r > a)
+    valid_points = grid.xyz[valid_indeces]
     print(f'total values = {np.shape(valid_indeces)[1]}')
     from tqdm import tqdm
 
@@ -144,39 +147,11 @@ def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
             if np.isnan(B).any():
                 print(f'alert!! B is nan, i={i}')
             else:
-                energy = energy + (np.linalg.norm(B)**2 * basic_volume)
+                energy = energy + (np.linalg.norm(B)**2 * grid.basic_volume)
             pbar.update(1)
         pbar.update()
         time.sleep(2.0)
     return energy/(8*np.pi)
-
-def create_3Dgrid(hdr, density, cX, cY):
-
-    pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
-    r_sun = hdr["RSUN_REF"]
-    d_pixel = np.mean([pxsizeX, pxsizeY])
-    dOBS = hdr["DSUN_OBS"]
-    d_pixel = arcsecs_to_radian(d_pixel) * dOBS
-    mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
-    ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
-    bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
-    pixel_xs = np.linspace(start=ref1, stop=ref1 +
-                           mapsizeX, num=int(mapsizeX/density))
-    pixel_ys = np.linspace(start=ref2, stop=ref2 +
-                           mapsizeY, num=int(mapsizeY/density))
-    xs_unique = -(pixel_xs-cX) * d_pixel
-    ys_unique = -(pixel_ys-cY) * d_pixel
-    z_num = np.max([mapsizeX, mapsizeY])
-    z_size = z_num*d_pixel
-    __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
-                          r_sun)
-    zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*5)))
-    xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
-    xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
-    basic_volume = ((xs_unique[1]-xs_unique[0]) *
-                    (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
-    grid = Grid3D(xs, ys, zs)
-    return grid.xyz, grid.r, basic_volume * 1e6
 
 def create_grid(latlim: tuple, lonlim: tuple, N, r=696340 * 1000, name=False):
     # N - количество ячеек на градус
@@ -287,9 +262,6 @@ def model_grid(
         return B_map
 
 def create_3Dgrid(hdr, density, cX, cY, mode='default'):
-
-
-
     pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
     r_sun = hdr["RSUN_REF"] 
     d_pixel = np.mean([pxsizeX, pxsizeY])
@@ -306,24 +278,34 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
     if mode == 'default':
-
         z_num = np.min([mapsizeX, mapsizeY])
         z_size = z_num*d_pixel
         __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
                               r_sun)
         zs_unique = np.linspace(z, z+z_size, num=int(z_num//density))
-    elif mode == 'opti':
+    elif mode == 'opti' or mode == 'track_loc':
         z_num = np.min([mapsizeX, mapsizeY])//3
         z_size = z_num*d_pixel
         __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
                               r_sun)
         zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density*3)))
+
     xs, ys, zs = np.meshgrid(xs_unique, ys_unique, zs_unique)
     xs, ys, zs = xs.flatten(), ys.flatten(), zs.flatten()
     basic_volume = ((xs_unique[1]-xs_unique[0]) *
                     (ys_unique[1]-ys_unique[0])*(zs_unique[1]-zs_unique[0]))
-    grid = Grid3D(xs, ys, zs)
-    return grid.xyz, grid.r, basic_volume * 1e6
+    
+    xyz = np.asarray([xs, ys, zs]).T
+    r = np.linalg.norm(xyz, axis=1)
+    num = np.shape(r)[0]
+
+    if mode == 'track_loc':
+        grid = Grid_nt(xyz, r, num, cX*d_pixel, cY*d_pixel, basic_volume*1e6)
+
+        return grid
+    else:
+        grid = Grid_nt(xyz, r, num, None, None, basic_volume*1e6)
+        return grid
 
 def comp_grid(
     grid: Grid,
