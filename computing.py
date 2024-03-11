@@ -275,6 +275,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
                            mapsizeX, num=int(mapsizeX/density))
     pixel_ys = np.linspace(start=ref2, stop=ref2 +
                            mapsizeY, num=int(mapsizeY/density))
+    loc_x, loc_y = -(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
     if mode == 'default':
@@ -300,7 +301,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     num = np.shape(r)[0]
 
     if mode == 'track_loc':
-        grid = Grid_nt(xyz, r, num, cX*d_pixel, cY*d_pixel, basic_volume*1e6)
+        grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
 
         return grid
     else:
