@@ -13,14 +13,16 @@ import pipeline
 import matplotlib.pyplot as plt
 import plots
 
-N = 216 # количество временных точек
+
+"17.02.2013 - 25.02.2013"
+N = 576 # количество временных точек
 density = 2 # пикселей на один объёмный куб
-day = 11 # начальная дата
-year = 2011
+day = 17 # начальная дата
+year = 2013
 month = '02'
-noaa_ar = 11158 # номер активной области
-frequency = '1h' # частота расчётов h - hour min - minute
-start_time = '00:00:00'
+noaa_ar = 11675 # номер активной области
+frequency = '12min' # частота расчётов h - hour min - minute, данные приходят раз в 12 минут
+start_time = '12:00:00'
 
 
 if __name__ == '__main__':
@@ -38,8 +40,8 @@ if __name__ == '__main__':
     start = len(energys)
     dates = np.datetime_as_string(dates, unit='s')
 
-    #__magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
-    #        dates[0], dates[-1], NOAA_AR=noaa_ar)
+    __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
+            dates[0], dates[-1], NOAA_AR=noaa_ar)
     #быстрее выходит скачивать сразу много файлов
 
     failed_counter = 0
