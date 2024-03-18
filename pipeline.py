@@ -14,6 +14,7 @@ import sunpy.map.sources
 import urllib
 import os
 from collections.abc import Iterable 
+import matplotlib.pyplot as plt
 
 
 from coordinates import xyz2ll, xyR2xyz, Coordinates
@@ -46,7 +47,7 @@ def bitmap_pixel_to_map(index, reference1, reference2):
 
 def bitmaps_to_points(
     TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
-    returnhdr=False
+    returnhdr=False, plot=False,
 ):
     """
     takes data from bitmaps and returns them as a 2d array of coordinates and B-values
@@ -126,6 +127,8 @@ def bitmaps_to_points(
             quiet_indeces = np.argwhere(databitmap == 33)
             active_indeces = np.vstack([active_indeces, quiet_indeces])
         active_onmap = bitmap_pixel_to_map(active_indeces, ref1, ref2)
+        mapsizeX, mapsizeY = int(hdrbitmap['CRSIZE1']), int(hdrbitmap['CRSIZE2'])
+
         for xindex, yindex in active_indeces:
             # plt.plot(yindex, xindex, 'o', ms=4, color='pink')
             tic = time.perf_counter()
@@ -139,6 +142,11 @@ def bitmaps_to_points(
 
             values.append(B)
             areas.append(area_simple(x_corr, y_corr))
+    if plot is not False:
+        
+        ref3, ref4 = ref1 + mapsizeX, ref2 + mapsizeY
+        B_s = dataMap[ref2:ref4, ref1:ref3]
+        plot.imshow(B_s)
     if returnhdr:
         return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
     else:
