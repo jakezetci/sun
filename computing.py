@@ -56,9 +56,13 @@ def __mponecube_adaptive(arg_array):
     global values
     global points
     global areas
-    x, y, z, volume = arg_array
-    B = cpp.b_comp(np.array([x,y,z]), values, points, areas)
+    global y0
 
+    x, y, z, volume = arg_array
+    vector = np.array([x,y,z])
+    B = cpp.b_comp(vector, values, points, areas)
+    if vector[1] == y0:
+        return np.inner(B, B)*volume, vector
     
     return np.inner(B, B) * volume
 
@@ -118,7 +122,7 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                    initializer=__mp_init, initargs=(shared_data, ))
     energy = 0.0
     func = __mponecube
-    if mode == 'adaptive':
+    if mode == 'adaptive' or mode == 'fineZ':
         func = __mponecube_adaptive
         v = np.array([grid.basic_volume])
         valid_points = np.concatenate([grid.xyz, v.T], axis=1)
@@ -146,7 +150,13 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
     elif mode == 'adaptive':
         return energy /(8*np.pi), grid.loc_x, grid.loc_y
-    elif mode == 'plot' or mode =='fineZ':
+    elif mode == 'fineZ':
+        x, y = np.asarray(vectors).T
+        ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
+        plt.show()
+        return energy /(8*np.pi), grid.loc_x, grid.loc_y
+
+    elif mode == 'plot':
         x, y = np.asarray(vectors).T
         ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
         plt.show()
@@ -360,25 +370,25 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
         z_num = np.max([mapsizeX, mapsizeY])//(density * 2) * 2
 
         z_size = z_num*d_pixel
-        xyz = np.zeros((z_num*2 * len(xs), 3)) 
+        xyz = np.zeros((z_num * len(xs), 3)) 
         basic_volume = np.zeros(z_num*len(xs))
         for i, (_x, _y) in enumerate(zip(xs, ys)):
 
             __x__, __y__, z = xyR2xyz(_x, _y, r_sun)
             #zs = np.array([np.linspace(z, z+z_size, num=int(z_num))])
-            zs_small = np.linspace(z, z+z_size/5, num=int(z_num/2))
-            zs_big = np.linspace(z+z_size/5, z+z_size, num=int(z_num/2))
+            zs_small = np.linspace(z, z+z_size/3, num=int(z_num/2))
+            zs_big = np.linspace(z+z_size/3, z+z_size, num=int(z_num/2))
 
             zs = np.array([np.hstack((zs_small, zs_big))])
             a = np.full((z_num,2), [_x, _y])
             xyz[i*z_num:z_num*(i+1)] = np.concatenate((a, zs.T), axis=1)
             basic_volume[i*z_num:z_num*(i+1)] = np.abs(np.roll(zs, -1) - zs)
-            basic_volume[z_num*(i)] = basic_volume[z_num*(i-1)]
+            basic_volume[z_num*(i+1)-1] = basic_volume[z_num*(i+1)-2]
 
         r = np.linalg.norm(xyz, axis=1)
         num = np.shape(r)[0]
-        basic_volume = ((xs_unique[1]-xs_unique[0]) *
-                        (ys_unique[1]-ys_unique[0])*d_pixel)
+        basic_volume = (xs_unique[1]-xs_unique[0]) *(ys_unique[1]-ys_unique[0])*basic_volume
+                        
         grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
         
         return grid
