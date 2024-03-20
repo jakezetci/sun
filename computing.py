@@ -150,9 +150,8 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         x, y = np.asarray(vectors).T
         ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
         plt.show()
-        time.sleep(60)
 
-        plt.close()
+
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
 
 
@@ -320,7 +319,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     d_pixel = np.mean([pxsizeX, pxsizeY])
     dOBS = hdr["DSUN_OBS"]
     d_pixel = arcsecs_to_radian(d_pixel) * dOBS
-    #r_sun = r_sun + d_pixel # safe call
+    #r_sun = r_sun + d_pixel # for good measure
     mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
     ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
     bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
@@ -358,20 +357,24 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     elif mode == 'fineZ':
         xs, ys = np.meshgrid(xs_unique, ys_unique)
         xs, ys = xs.flatten(), ys.flatten()
-        z_num = np.min([mapsizeX, mapsizeY])//density
+        z_num = np.max([mapsizeX, mapsizeY])//(density * 2) * 2
+
         z_size = z_num*d_pixel
-        xyz = np.zeros((z_num * len(xs), 3))
+        xyz = np.zeros((z_num*2 * len(xs), 3)) 
+        basic_volume = np.zeros(z_num*len(xs))
         for i, (_x, _y) in enumerate(zip(xs, ys)):
-            
+
             __x__, __y__, z = xyR2xyz(_x, _y, r_sun)
             #zs = np.array([np.linspace(z, z+z_size, num=int(z_num))])
-            zs_small = np.linspace(z, z+z_size/5, num=int(z_num)/2)
-            zs_big = np.linspace(z+z_size/5, z+z_size, num=int(z_num)/2)
+            zs_small = np.linspace(z, z+z_size/5, num=int(z_num/2))
+            zs_big = np.linspace(z+z_size/5, z+z_size, num=int(z_num/2))
 
-            zs = np.hstack((zs_small, zs_big))
+            zs = np.array([np.hstack((zs_small, zs_big))])
             a = np.full((z_num,2), [_x, _y])
             xyz[i*z_num:z_num*(i+1)] = np.concatenate((a, zs.T), axis=1)
-        
+            basic_volume[i*z_num:z_num*(i+1)] = np.abs(np.roll(zs, -1) - zs)
+            basic_volume[z_num*(i)] = basic_volume[z_num*(i-1)]
+
         r = np.linalg.norm(xyz, axis=1)
         num = np.shape(r)[0]
         basic_volume = ((xs_unique[1]-xs_unique[0]) *
