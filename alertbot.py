@@ -13,8 +13,8 @@ from telebot.util import quick_markup
 
 
 try:
-    with open("callid.txt") as f:
-        call_id = int(f.read())
+    #with open("callid.txt") as f:
+    #    call_id = int(f.read())
 
     with open("TOKEN.txt") as ff:
         API_TOKEN = ff.read()
@@ -39,7 +39,8 @@ I've collected your chat id and i'm going to use it to send status updates.\
     )
     global chat_id
     chat_id = message.chat.id
-    pass
+    with open('callid.txt', 'w') as f:
+        f.write(str(chat_id))
 
 
 # Handle all other messages with content_type 'text' (content_types defaults to ['text'])
