@@ -139,7 +139,7 @@ active_indeces = np.argwhere(databitmap == 34)
 # active_onmap = pipeline.bitmap_pixel_to_map(active_indeces, ref1, ref2)
 
 
-computed = True
+computed = False
 
 
 # 'maglines/REAL line v2.pkl', 'maglines/REAL line v3.pkl',
@@ -174,7 +174,7 @@ if computed == False:
         in_value = cpp.b_comp(xyz, values, points, areas)
 
         line_comp = lib.Magneticline(xyz, in_value, step=10*1e3)
-        steps = 100000
+        steps = 10000
         sign = math.copysign(1, in_value[2])
         line_comp = computing.comp_magneticline(line_comp, values, points, areas, returnobj=True,
                                                 name=f'REAL line v{num}', maxsteps=steps,
@@ -200,7 +200,7 @@ else:
                 lw=2, alpha=0.8)
         axZ.plot(xx_comp, zz_comp, '--', color=colors[i],
                  label=f'computed line {i+1}', lw=2)
-ax.plot([], [], color='white', lw=2, label='расчётные магнитные линии')
+#ax.plot([], [], color='white', lw=2, label='расчётные магнитные линии')
 ax.legend(loc='best')
-
+plt.show()
 #ax.legend(loc='best', fontsize='x-large')

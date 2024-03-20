@@ -68,8 +68,11 @@ def config(
     if grid:
         ax.grid(which="major", color="k")
         ax.grid(which="minor", color="gray", linestyle=":")
+    elif grid == "minor":
+        #ax.grid(which="major", color="k", linestyle=':')
+        ax.grid(which="minor", color="gray", linestyle=":")
 
-    COLOR = "#003087"
+    COLOR = "k"
     mpl.rcParams["text.color"] = COLOR
     mpl.rcParams["axes.labelcolor"] = COLOR
     mpl.rcParams["xtick.color"] = COLOR
@@ -78,18 +81,18 @@ def config(
     ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
     ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
     ax.tick_params(which="both", width=2)
-    ax.tick_params(which="major", labelsize="medium")
+    ax.tick_params(which="major", labelsize="large")
     ax.tick_params(which="minor", labelsize="medium", color="c")
 
-    plt.xticks(fontname="HSE Slab")
-    plt.yticks(fontname="HSE Slab")
+    plt.xticks(fontname="Arial")
+    plt.yticks(fontname="Arial")
 
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
 
-    ax.set_ylabel(ylabel, fontsize="large", fontname="HSE Slab")
-    ax.set_xlabel(xlabel, fontsize="large", fontname="HSE Slab",)
-    ax.set_title(title, fontsize="large", fontname="HSE Slab")
+    ax.set_ylabel(ylabel, fontsize="xx-large", fontname="Arial")
+    ax.set_xlabel(xlabel, fontsize="xx-large", fontname="Arial",)
+    ax.set_title(title, fontsize="xx-large", fontname="Arial")
     if logscalex:
         ax.set_xscale("log")
     if logscaley:
@@ -153,9 +156,9 @@ def subplots(
         ax.tick_params(which="both", width=2)
         ax.tick_params(which="major", labelsize=24, length=12)
         ax.tick_params(which="minor", labelsize=12, length=6, color="c")
-        ax.set_ylabel(yy, fontsize=32, fontname="HSE Slab")
-        ax.set_xlabel(xx, fontsize=32, fontname="HSE Slab")
-        ax.set_title(ttl, fontsize=32, fontname="HSE Slab")
+        ax.set_ylabel(yy, fontsize=32, fontname="Arial")
+        ax.set_xlabel(xx, fontsize=32, fontname="Arial")
+        ax.set_title(ttl, fontsize=32, fontname="Arial")
         ax.grid(which="major", color="k")
         ax.grid(which="minor", color="gray", linestyle=":")
 
@@ -399,7 +402,7 @@ def plotmap(
         sc = ax.scatter(xx, yy, c=sq, s=ms, cmap="inferno", alpha=alpha)
         cbar = fig.colorbar(sc, location='bottom', shrink=0.6, aspect=50,
                             pad=0.0001)
-        cbar.ax.set_xlabel("лучевая компонента магнитного поля, Гаусс",
+        cbar.ax.set_xlabel("line-of-sight component of magnetic field, Mx/cm2",
                            size='medium')
         cbar.ax.tick_params(labelsize='small', direction='in')
     else:

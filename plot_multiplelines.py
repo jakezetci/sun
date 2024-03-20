@@ -23,7 +23,7 @@ dipolelat, dipolelon = 60, 30
 phi, theta = ll2pt(60, 30)
 
 alerts = False
-computed = False
+computed = True
 
 m = np.asarray([np.cos(-phi), 0, np.sin(phi)]) * 1e5*1e27
 pos = Coordinates(600000*1e3, dipolelat, dipolelon, latlon=True)
@@ -43,23 +43,24 @@ else:
     pass
 
 steps = 10000
-xmin, xmax = 1.7*1e3, 3.9e5*1e3
-ymin, ymax = 5.665e5*1e3, 7.4e5*1e3
+xmin, xmax = -8.74*1e7, 4.448e5*1e8
+ymin, ymax = 5.12*1e8, 7.22*1e8
 computed = True
 if computed == True:
     with open('Lmaps/Диполь 60, 30 closeup22.pkl', 'rb') as fmap:
         picturemap = pickle.load(fmap)
-    fig, ax = plotmap(picturemap, n_linesx=17, n_linesy=9, alpha=0.6, lw=0.6, xlabel='X, m', ylabel='Y, m',
-                      title='Магнитные линии диполя на координатах (60,30)', ignoretop=True,
+    fig, ax = plotmap(picturemap, n_linesx=19, n_linesy=9, alpha=0.6, lw=0.6, xlabel='X, m', ylabel='Y, m',
+                      title='Magnetic field lines of a dipole at (60,30)', ignoretop=True,
                       ignorecorners=5,
-                      xlimit=[xmin, xmax], ylimit=[ymin, ymax],
+                      #xlimit=[xmin, xmax], ylimit=[ymin, ymax],
                       dpi=140,
                       figsize=(5.6, 5.6),
-                      grid=False)
+                      grid=False, 
+                      )
 else:
     latmax, latmin, lonmax, lonmin = 80, 40, 80, 10
     fig, ax = create_model_plotmap([49, 89], [-10, 80], N=10, M=m,
-                                   dipolepos=pos, name='Диполь 60, 30 closeup22', lines=20, alpha=0.6, lw=1.5,
+                                   dipolepos=pos, name='Диполь 60, 30 closeup22', n_linesx=17, n_linesy=9, alpha=0.6, lw=1.5,
                                    vector=False, xlabel='X, km', ylabel='Y, km',
                                    title='Magnetic lines of a dipole at (60,30)')
 
@@ -114,13 +115,15 @@ else:
             ymin = ymin_line
         if xmin_line < xmin:
             xmin = xmin_line
-ax.plot([], [], '--', label='модельные линии поля диполя', color='black')
-ax.plot([], [], '-', label='подсчитанные нашим методом линии', color='black')
+ax.plot([], [], '--', label='model lines of a dipole', color='black')
+ax.plot([], [], '-', label='computed lines of a dipole', color='black')
 
 
-ax.legend(loc='best', fontsize='medium')
+ax.legend(loc='upper right', fontsize='medium')
 
 if alerts:
     rand = np.random.randint(10, 99)
     fig.savefig(f'pics/lines{rand}.png')
     alert_bot('вот картинка..', imagepath=f'pics/lines{rand}.png')
+
+plt.show()
