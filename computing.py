@@ -16,6 +16,7 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 from collections.abc import Iterable 
 import matplotlib
+import time
 
 from coordinates import Coordinates, xyR2xyz
 from lib import B_comp_map, Grid, create_grid, Magneticline
@@ -88,9 +89,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         mode: if 'opti' - boosts up the speed by lowering the number of cubes, 
                 if 'track_loc' - also returns the position of the active region
     """
-    if mode == 'plot':
+    if mode == 'plot' or mode == 'fineZ':
         plt.close()
         fig, (ax1, ax2) = plt.subplots(1,2)
+    else:
+        ax1, ax2 = False, False
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
                                                               magnetogram=magnetogram_path,
@@ -100,7 +103,7 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
 
     grid = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
     energy = 0.0
-    a = 696000 * 1e3
+    a = 0
     valid_indeces = np.where(grid.r > a)
     valid_points = grid.xyz[valid_indeces]
     
@@ -143,15 +146,18 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
     elif mode == 'adaptive':
         return energy /(8*np.pi), grid.loc_x, grid.loc_y
-    elif mode == 'plot':
+    elif mode == 'plot' or mode =='fineZ':
         x, y = np.asarray(vectors).T
         ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
         plt.show()
+        time.sleep(60)
+
+        plt.close()
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
 
 
     else:
-        return energy * grid.basic_volume/(8*np.pi)
+        return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
 
             
 
@@ -301,11 +307,12 @@ def model_grid(
             )
             B_map.save_pkl(name=f"checkpoint2 {name}")
             """
-    # B_map.save_pkl(name=name)
+    B_map.save_pkl(name=name)
     if alert is True:
         alert_bot("модельная сетка посчиталась...")
     if returnobj:
         return B_map
+
 
 def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
@@ -324,6 +331,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     loc_x, loc_y = -(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
+    
     if mode == 'default':
         z_num = np.min([mapsizeX, mapsizeY])
         z_size = z_num*d_pixel
@@ -347,8 +355,34 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
         basic_volume = np.abs(np.roll(zs_unique, -1) - zs_unique)
         basic_volume[-1] = basic_volume[-2]
         basic_volume = basic_volume * (xs_unique[1]-xs_unique[0]) * (ys_unique[1]-ys_unique[0])
-    
+    elif mode == 'fineZ':
+        xs, ys = np.meshgrid(xs_unique, ys_unique)
+        xs, ys = xs.flatten(), ys.flatten()
+        z_num = np.min([mapsizeX, mapsizeY])//density
+        z_size = z_num*d_pixel
+        xyz = np.zeros((z_num * len(xs), 3))
+        for i, (_x, _y) in enumerate(zip(xs, ys)):
+            
+            __x__, __y__, z = xyR2xyz(_x, _y, r_sun)
+            #zs = np.array([np.linspace(z, z+z_size, num=int(z_num))])
+            zs_small = np.linspace(z, z+z_size/5, num=int(z_num)/2)
+            zs_big = np.linspace(z+z_size/5, z+z_size, num=int(z_num)/2)
 
+            zs = np.hstack((zs_small, zs_big))
+            a = np.full((z_num,2), [_x, _y])
+            xyz[i*z_num:z_num*(i+1)] = np.concatenate((a, zs.T), axis=1)
+        
+        r = np.linalg.norm(xyz, axis=1)
+        num = np.shape(r)[0]
+        basic_volume = ((xs_unique[1]-xs_unique[0]) *
+                        (ys_unique[1]-ys_unique[0])*d_pixel)
+        grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
+        
+        return grid
+
+
+    
+    
 
 
     if mode != 'adaptive':
@@ -361,12 +395,12 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     r = np.linalg.norm(xyz, axis=1)
     num = np.shape(r)[0]
 
-    if mode == 'track_loc':
+    if mode == 'track_loc' or 'plot':
         grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
 
         return grid
     else:
-        grid = Grid_nt(xyz, r, num, None, None, basic_volume*1e6)
+        grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
         return grid
 
 def comp_grid(
@@ -437,7 +471,7 @@ def model_magneticline(
                     f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
-            if magline.points[-1].r < stoppoint:
+            if np.linalg.norm(magline.points[-1]) < stoppoint:
                 break
         return magline
 
@@ -507,7 +541,7 @@ def comp_magneticline(
                     f"values {i-timestamp}-{i} done in {toc - tic:0.2f} seconds")
                 tic = time.perf_counter()
                 magline.save_pkl(name)
-            if magline.points[-1].r < stoppoint:
+            if np.linalg.norm(magline.points[-1]) < stoppoint:
                 break
         return magline
 
@@ -534,7 +568,8 @@ def create_model_plotmap(
     dipolepos,
     vector=False,
     name=False,
-    lines=10,
+    n_linesx=10,
+    n_linesy=10,
     alpha=0.7,
     lw=0.8,
     title="",
@@ -546,7 +581,8 @@ def create_model_plotmap(
                           returnobj=True, vector=vector)
     return plotmap(
         computed,
-        n_lines=lines,
+        n_linesx=n_linesx,
+        n_linesy=n_linesy,
         alpha=alpha,
         lw=lw,
         title=title,

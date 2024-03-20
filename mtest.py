@@ -63,3 +63,4 @@ print(f'green_optimized - {time_o:.3} secs')
 print(f'выигрыш optimized в {time_def/time_o:.3} раза')
 print(f'выигрыш C++ в {time_def/time_c:.3} раза')
 """
+
