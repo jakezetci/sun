@@ -72,6 +72,16 @@ def bitmaps_to_points(
     """
     def area_simple(xindex, yindex):
 
+        # rotating to the first quadrant
+        if xindex >= 0 and yindex < 0:
+            xindex, yindex = -yindex, xindex
+        elif xindex < 0 and yindex < 0:
+            xindex, yindex = -xindex, -yindex
+        elif xindex < 0 and yindex >= 0:
+            xindex, yindex = yindex, -xindex
+        elif xindex >= 0 and yindex >= 0:
+            xindex, yindex = xindex, yindex
+
         tic = time.perf_counter()
         tan_dif = (np.arctan2(yindex + 1, xindex + 1) -
                    np.arctan2(yindex, xindex))
