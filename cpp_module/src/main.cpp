@@ -47,7 +47,7 @@ std::array<double,3> GreenBl(double r1x, double r1y, double r1z, double r2x, dou
     r2[0] = r2x;
     r2[1] = r2y;
     r2[2] = r2z;
-    double a = 696340000;
+    double a = 696000000;
     
     for(int i = 0 ; i < 3; i++){
         r_diff[i] = r1[i] - r2[i];
