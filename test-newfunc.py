@@ -17,13 +17,13 @@ import os
 '''2011-02-11T00:00:00.000000000
 '''
 "04.09.2017 - 08.09.2017"
-N = 6  # количество временных точек
-density = 3  # пикселей на один объёмный куб
+N = 100  # количество временных точек
+density = 5  # пикселей на один объёмный куб
 day = 13  # начальная дата
 year = 2011
 month = '02'
 noaa_ar = 11158  # номер активной области
-frequency = '6h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
+frequency = '1h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
 start_time = '00:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
@@ -41,7 +41,12 @@ if __name__ == '__main__':
     except:
         energys = []
     print(energys)
+    try:
+        start = len(energys)
+    except TypeError:
+        start = 1
     start = 0
+    energys = []
     dates = np.datetime_as_string(dates, unit='s')
 
     # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
@@ -54,8 +59,10 @@ if __name__ == '__main__':
         date = dates[i]
         print(date)
         try:
-            bitmap_path = [pipeline.file_name(date, 'hmi.mharp_720s', general_path=home_path)]
-            magnetogram_path = [pipeline.file_name(date, 'hmi.m_720s', general_path=home_path)]
+            bitmap_path = [pipeline.file_name(
+                date, 'hmi.mharp_720s', general_path=home_path)]
+            magnetogram_path = [pipeline.file_name(
+                date, 'hmi.m_720s', general_path=home_path)]
         except FileNotFoundError:
             dts = np.loadtxt(
                 f'dates_{noaa_ar}_{day}_dens{density}_curv.txt', dtype=np.datetime64)
@@ -65,8 +72,13 @@ if __name__ == '__main__':
             continue
 
         energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
-                                           onlyactive=True, threads=10, mode='fineZ')
+                                           onlyactive=False, mode='fineZ', threads=10,
+                                           follow_flux=False)
+        
+        
         print(f'{date} - {energy}')
+        energys = np.append(energys, energy)
+        #continue
         computing.alert_bot(f'{date} - {energy}')
 
         energys = np.append(energys, energy)

@@ -63,8 +63,8 @@ def __mponecube_adaptive(arg_array):
     x, y, z, volume = arg_array
     vector = np.array([x, y, z])
     B = cpp.b_comp(vector, values, points, areas)
-    # if vector[1] == y0:
-    #    return np.inner(B, B)*volume, vector
+    if vector[1] == y0:
+       return np.inner(B, B)*volume, vector
 
     return np.inner(B, B) * volume
 
@@ -83,7 +83,8 @@ def __mp_init(shared_data):
 
 
 def mp_energy(bitmap_path, magnetogram_path, density=5,
-              onlyactive=True, threads=mp.cpu_count(), mode='default'):
+              onlyactive=True, threads=mp.cpu_count(), mode='default',
+              follow_flux=False):
     """calculates energy of a single active region provided
     ! utilising multiprocessing ! (about 6 times faster)
 
@@ -98,8 +99,8 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     """
     if mode == 'plot' or mode == 'fineZ':
         plt.close()
-        # fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1, ax2 = False, False
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        #ax1, ax2 = False, False
 
     else:
         ax1, ax2 = False, False
@@ -109,6 +110,9 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True,
                                                               plot=ax1)
+    
+    if follow_flux:
+        return np.sum(np.abs(values))
     grid = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
     energy = 0.0
     a = 0
@@ -137,11 +141,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     from tqdm import tqdm
     with tqdm(total=np.shape(valid_points)[0], maxinterval=0.1) as pbar:
         for res in pool.imap(func, valid_points):
-            # if isinstance(res, Iterable):
-            #    vector = res[1]
-            #    res = res[0]
-            #    points_to_display.append(res)
-            #    vectors.append([vector[0], vector[2]])
+            if isinstance(res, Iterable):
+               vector = res[1]
+               res = res[0]
+               points_to_display.append(res)
+               vectors.append([vector[0], vector[2]])
             if np.isnan(res):
                 print('nan happened')
                 pass
@@ -158,10 +162,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     elif mode == 'adaptive':
         return energy / (8*np.pi), grid.loc_x, grid.loc_y
     elif mode == 'fineZ':
-        # x, y = np.asarray(vectors).T
-        # ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
-        # fig.savefig('temp.png')
-        # alert_bot('посчитана картинка:', 'temp.png')
+        x, y = np.asarray(vectors).T
+        ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
+        fig.savefig('temp.png')
+        plt.show()
+        #alert_bot('посчитана картинка:', 'temp.png')
         return energy / (8*np.pi), grid.loc_x, grid.loc_y
 
     elif mode == 'plot':
@@ -328,25 +333,53 @@ def model_grid(
 
 
 def create_3Dgrid(hdr, density, cX, cY, mode='default'):
+    def tilt(a):
+
+        return -a/np.sqrt(4096**2 - a**2)
     pxsizeX, pxsizeY = hdr["CDELT1"], hdr["CDELT2"]
     r_sun = hdr["RSUN_REF"]
     d_pixel = np.mean([pxsizeX, pxsizeY])
     dOBS = hdr["DSUN_OBS"]
     d_pixel = arcsecs_to_radian(d_pixel) * dOBS
-    # r_sun = r_sun + d_pixel  # for good measure
+    r_sun = r_sun + d_pixel/np.pi  # for good measure
     mapsizeX, mapsizeY = hdr['CRSIZE1'], hdr['CRSIZE2']
     ref1, ref2 = hdr["CRPIX1"], hdr["CRPIX2"]
     bitmapcenterX, bitmapcenterY = ref1 + mapsizeX/2, ref2 + mapsizeY/2
+
+    extra_n = np.max((mapsizeX, mapsizeY))
+    tilt_x, tilt_y = tilt(bitmapcenterX-cX), tilt(bitmapcenterY-cY)
+    
+    
     pixel_xs = np.linspace(start=ref1, stop=ref1 +
                            mapsizeX, num=int(mapsizeX//density))
     pixel_ys = np.linspace(start=ref2, stop=ref2 +
                            mapsizeY, num=int(mapsizeY//density))
+    
+    if tilt_x < 0:
+        appendix = np.linspace(ref1+mapsizeX, ref1+mapsizeX+extra_n*np.abs(tilt_x), num = int(np.abs(tilt_x)*extra_n//density))
+        pixel_xs = np.append(pixel_xs,appendix)
+    else:
+        appendix = np.linspace(ref1, ref1-extra_n*np.abs(tilt_x), num = int(np.abs(tilt_x)*extra_n//density))
+        pixel_xs = np.append(pixel_xs,appendix)   
+    
+    if tilt_y < 0:
+        
+        appendix = np.linspace(ref2+mapsizeY, ref2+mapsizeY*np.abs(tilt_y), num = int(np.abs(tilt_y)*extra_n//density))
+        pixel_ys = np.append(pixel_ys,appendix)
+    else:
+        appendix = np.linspace(ref2, ref2-extra_n*np.abs(tilt_y), num = int(np.abs(tilt_y)*extra_n//density))
+        pixel_ys = np.append(pixel_ys,appendix)
+
+
     loc_x, loc_y = -(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
 
-    xs_unique = xs_unique + d_pixel/3.33333 #shift to avoid nans
-    ys_unique = ys_unique + d_pixel/3.33333 #shift
+    xs_unique = xs_unique + d_pixel/np.pi #shift to avoid nans
+    ys_unique = ys_unique + d_pixel/np.pi #shift
+
+    
+
 
     if mode == 'default':
         z_num = np.min([mapsizeX, mapsizeY])
@@ -375,7 +408,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     elif mode == 'fineZ':
         xs, ys = np.meshgrid(xs_unique, ys_unique)
         xs, ys = xs.flatten(), ys.flatten()
-        z_num = np.max([mapsizeX, mapsizeY])//(density * 2) * 2
+        z_num = np.max([mapsizeX, mapsizeY])//(density * 2) *2
 
         z_size = z_num*d_pixel * density
         xyz = np.zeros((z_num * len(xs), 3))
