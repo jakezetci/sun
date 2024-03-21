@@ -45,8 +45,7 @@ if __name__ == '__main__':
         start = len(energys)
     except TypeError:
         start = 1
-    start = 0
-    energys = []
+
     dates = np.datetime_as_string(dates, unit='s')
 
     # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
