@@ -153,7 +153,8 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     elif mode == 'fineZ':
         x, y = np.asarray(vectors).T
         ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
-        plt.show()
+        fig.savefig('temp.png')
+        alert_bot('посчитана картинка:', 'temp.png')
         return energy /(8*np.pi), grid.loc_x, grid.loc_y
 
     elif mode == 'plot':

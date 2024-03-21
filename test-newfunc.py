@@ -67,6 +67,7 @@ if __name__ == '__main__':
         energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
                                            onlyactive=True, threads=10, mode='fineZ')
         print(f'{date} - {energy}')
+        computing.alert_bot(f'{date} - {energy}')
 
         energys = np.append(energys, energy)
         xs.append(x)
