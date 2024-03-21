@@ -16,7 +16,7 @@ import plots
 '''2011-02-11T00:00:00.000000000
 '''
 "04.09.2017 - 08.09.2017"
-N = 24  # количество временных точек
+N = 36  # количество временных точек
 density = 3  # пикселей на один объёмный куб
 day = 12  # начальная дата
 year = 2011
@@ -39,10 +39,10 @@ if __name__ == '__main__':
     except:
         energys = []
     print(energys)
-    start = len(energys)
+    start = 2
     dates = np.datetime_as_string(dates, unit='s')
 
-    # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
+    #__magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
     #        dates[0], dates[-1], NOAA_AR=noaa_ar)
     # быстрее выходит скачивать сразу много файлов
 
@@ -63,7 +63,8 @@ if __name__ == '__main__':
             continue
 
         energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
-                                           onlyactive=True, threads=10, mode='fineZ')
+                                           threads=6, onlyactive=True, mode='fineZ')
+        computing.alert_bot(f'{date} - {energy:.3}')
         print(f'{date} - {energy}')
 
         energys = np.append(energys, energy)

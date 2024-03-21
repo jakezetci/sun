@@ -149,10 +149,10 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     elif mode == 'plot' or mode =='fineZ':
         x, y = np.asarray(vectors).T
         ax2.scatter(x, y, c=points_to_display, alpha=0.6,  norm=matplotlib.colors.LogNorm())
-        plt.show()
+        fig.savefig('temp.png')
+        alert_bot('картинка для одной точки', imagepath='temp.png')
 
-
-        return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
+        return energy /(8*np.pi), grid.loc_x, grid.loc_y
 
 
     else:
@@ -366,19 +366,18 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
 
             __x__, __y__, z = xyR2xyz(_x, _y, r_sun)
             #zs = np.array([np.linspace(z, z+z_size, num=int(z_num))])
-            zs_small = np.linspace(z, z+z_size/5, num=int(z_num/2))
-            zs_big = np.linspace(z+z_size/5, z+z_size, num=int(z_num/2))
+            zs_small = np.linspace(z, z+z_size/3, num=int(z_num/2))
+            zs_big = np.linspace(z+z_size/3, z+z_size, num=int(z_num/2))
 
             zs = np.array([np.hstack((zs_small, zs_big))])
             a = np.full((z_num,2), [_x, _y])
             xyz[i*z_num:z_num*(i+1)] = np.concatenate((a, zs.T), axis=1)
             basic_volume[i*z_num:z_num*(i+1)] = np.abs(np.roll(zs, -1) - zs)
-            basic_volume[z_num*(i)] = basic_volume[z_num*(i-1)]
+            basic_volume[z_num*(i+1)-1] = basic_volume[z_num*(i+1)-2]
 
         r = np.linalg.norm(xyz, axis=1)
         num = np.shape(r)[0]
-        basic_volume = ((xs_unique[1]-xs_unique[0]) *
-                        (ys_unique[1]-ys_unique[0])*d_pixel)
+        basic_volume = (xs_unique[1]-xs_unique[0]) *(ys_unique[1]-ys_unique[0])*basic_volume
         grid = Grid_nt(xyz, r, num, loc_x, loc_y, basic_volume*1e6)
         
         return grid
