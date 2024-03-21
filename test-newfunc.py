@@ -12,6 +12,7 @@ import cpp_module as cpp
 import pipeline
 import matplotlib.pyplot as plt
 import plots
+import os
 
 '''2011-02-11T00:00:00.000000000
 '''
@@ -24,6 +25,7 @@ month = '02'
 noaa_ar = 11158  # номер активной области
 frequency = '6h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
 start_time = '00:00:00'
+home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
 
 if __name__ == '__main__':
@@ -52,8 +54,8 @@ if __name__ == '__main__':
         date = dates[i]
         print(date)
         try:
-            bitmap_path = [pipeline.file_name(date, 'hmi.mharp_720s')]
-            magnetogram_path = [pipeline.file_name(date, 'hmi.m_720s')]
+            bitmap_path = [pipeline.file_name(date, 'hmi.mharp_720s', general_path=home_path)]
+            magnetogram_path = [pipeline.file_name(date, 'hmi.m_720s', general_path=home_path)]
         except FileNotFoundError:
             dts = np.loadtxt(
                 f'dates_{noaa_ar}_{day}_dens{density}_curv.txt', dtype=np.datetime64)
