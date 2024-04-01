@@ -7,6 +7,7 @@ import pipeline
 import matplotlib.pyplot as plt
 import plots
 import os
+import time
 
 
 N = 12  # количество временных точек
@@ -24,7 +25,10 @@ if __name__ == "__main__":
     # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
     #        dates[0], dates[-1], NOAA_AR=noaa_ar)
     # быстрее выходит скачивать сразу много файлов
+    time_spent = []
+
     for density in density_array:
+        tic = time.perf_counter()
         dates = pd.date_range(start=f"{year}-{month}-{day} {start_time}",
                       freq=frequency, periods=N).values
         np.savetxt(
@@ -59,7 +63,7 @@ if __name__ == "__main__":
                 continue
             
             energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
-                                               onlyactive=True, mode='fineZ',
+                                               onlyactive=True, mode='fineZ', threads=8,
                                                follow_flux=False)
             print(f'{date} - {energy}')
             energys = np.append(energys, energy)
@@ -75,5 +79,8 @@ if __name__ == "__main__":
             f'dates_{noaa_ar}_{day}_dens{density}_test.txt', dtype=np.datetime64)
         ax.plot(dts, energys, '-',
                 label=f'density={density}')
-    
+        toc = time.perf_counter()
+        time_spent.append((toc-tic) / 12)
+
     plt.show()
+    np.savetxt('times_of_density.txt', time_spent)
