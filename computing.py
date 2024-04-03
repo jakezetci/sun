@@ -129,7 +129,7 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                                                               returnhdr=True,
                                                               plot=ax1)
     
-    area = 696000000**2 / (4096*4096) *np.pi * 16
+    area = (696000000**2 / (4096*4096) ) #*np.pi * 16
     areas = np.full_like(areas, area)
     
     if follow_flux:
