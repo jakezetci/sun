@@ -19,7 +19,7 @@ frequency = '16h'  # частота расчётов h - hour min - minute; да
 start_time = '00:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
-density_array = np.linspace(10, 1, num=10-1)
+density_array = np.linspace(20.125, 10.125, num=10-1)
 
 if __name__ == "__main__":
     # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
@@ -77,10 +77,11 @@ if __name__ == "__main__":
         fig, ax = plots.config(xlabel='date', ylabel='flux, erg')
         dts = np.loadtxt(
             f'dates_{noaa_ar}_{day}_dens{density}_test2.txt', dtype=np.datetime64)
-        ax.plot(j, energys, '-',
+        ax.plot(dts, energys, '-',
                 label=f'density={density}')
         toc = time.perf_counter()
         time_spent.append((toc-tic) / N)
-
+        computing.alert_bot(f'time spent for density {density} = {(toc-tic) / N}')
     plt.show()
+    
     np.savetxt('times_of_density.txt', time_spent)
