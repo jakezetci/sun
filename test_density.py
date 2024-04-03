@@ -10,16 +10,16 @@ import os
 import time
 
 
-N = 12  # количество временных точек
+N = 6  # количество временных точек
 day = 13  # начальная дата
 year = 2011
 month = '02'
 noaa_ar = 11158  # номер активной области
-frequency = '8h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
+frequency = '16h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
 start_time = '00:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
-density_array = np.linspace(10, 1, num=20-1)
+density_array = np.linspace(10, 1, num=10-1)
 
 if __name__ == "__main__":
     # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
@@ -32,10 +32,10 @@ if __name__ == "__main__":
         dates = pd.date_range(start=f"{year}-{month}-{day} {start_time}",
                       freq=frequency, periods=N).values
         np.savetxt(
-            f'dates_{noaa_ar}_{day}_dens{density}_test.txt', dates, fmt='%s')
+            f'dates_{noaa_ar}_{day}_dens{density}_test2.txt', dates, fmt='%s')
         try:
             energys = np.loadtxt(
-                f'energys_{noaa_ar}_density={density}, day={day}_test.txt')
+                f'energys_{noaa_ar}_density={density}, day={day}_test2.txt')
         except:
             energys = []
         print(energys)
@@ -56,8 +56,8 @@ if __name__ == "__main__":
                     date, 'hmi.m_720s', general_path=home_path)]
             except FileNotFoundError:
                 dts = np.loadtxt(
-                    f'dates_{noaa_ar}_{day}_dens{density}_test.txt', dtype=np.datetime64)
-                np.savetxt(f'dates_{noaa_ar}_{day}_dens{density}_test.txt', np.delete(
+                    f'dates_{noaa_ar}_{day}_dens{density}_test2.txt', dtype=np.datetime64)
+                np.savetxt(f'dates_{noaa_ar}_{day}_dens{density}_test2.txt', np.delete(
                     dts, i - failed_counter), fmt='%s')
                 failed_counter += 1
                 continue
@@ -68,19 +68,19 @@ if __name__ == "__main__":
             print(f'{date} - {energy}')
             energys = np.append(energys, energy)
             #continue
-            computing.alert_bot(f'{date} - {energy}, dens={density}')
+            #computing.alert_bot(f'{date} - {energy}, dens={density}')
 
             np.savetxt(
-                f'energys_{noaa_ar}_density={density}, day={day}_test.txt', energys)
+                f'energys_{noaa_ar}_density={density}, day={day}_test2.txt', energys)
 
         print(f'{failed_counter} downloads failed')
         fig, ax = plots.config(xlabel='date', ylabel='flux, erg')
         dts = np.loadtxt(
-            f'dates_{noaa_ar}_{day}_dens{density}_test.txt', dtype=np.datetime64)
-        ax.plot(dts, energys, '-',
+            f'dates_{noaa_ar}_{day}_dens{density}_test2.txt', dtype=np.datetime64)
+        ax.plot(j, energys, '-',
                 label=f'density={density}')
         toc = time.perf_counter()
-        time_spent.append((toc-tic) / 12)
+        time_spent.append((toc-tic) / N)
 
     plt.show()
     np.savetxt('times_of_density.txt', time_spent)
