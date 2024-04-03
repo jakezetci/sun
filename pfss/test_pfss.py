@@ -2,7 +2,7 @@ import pfsspy
 import pfsspy.utils
 
 import os
-
+import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
 import sunpy.map
@@ -10,11 +10,13 @@ from sunpy.net import Fido
 from sunpy.net import attrs as a
 
 if __name__ == "__main__":
+    time = '2011/02/13'
 
-    time = a.Time('2010/01/01', '2010/01/02')
+    # time = a.Time('2010/01/01', '2010/01/02')
     series = a.jsoc.Series('hmi.synoptic_mr_polfil_720s')
-    crot = a.jsoc.PrimeKey('CAR_ROT', 2210)
-
+    crot = a.jsoc.PrimeKey('CAR_ROT',
+                           int(sunpy.coordinates.sun.carrington_rotation_number(time)))
+    print(sunpy.coordinates.sun.carrington_rotation_number(time))
     result = Fido.search(series, crot,
                          a.jsoc.Notify('rrzhdanov@edu.hse.ru'))
     files = Fido.fetch(result)
@@ -57,3 +59,19 @@ if __name__ == "__main__":
     ax.set_title('Source surface magnetic field')
 
     plt.show()
+    ns = 15
+    nphi = 360
+    nr = 10
+    rss - 2.5
+
+    magnetic_field = pfss_out.bg
+    b_r = magnetic_field[:, :, 0, 0]
+    b_r = np.copy(b_r)
+    # plt.figure()
+    # plt.imshow(b_r)
+
+    coors_set = []
+    # magnetic_fields = pfss_out.get_bvec(coors_set)
+    coor = hmi_map.pixel_to_world(10*u.pix, 20*u.pix)
+    plt.figure()
+    plt.imshow(hmi_map.data)
