@@ -10,6 +10,7 @@ import matplotlib as mpl
 import matplotlib.ticker as tck
 import numpy as np
 import math
+plt.rcParams['axes.unicode_minus'] = False
 
 
 def config(
@@ -84,15 +85,15 @@ def config(
     ax.tick_params(which="major", labelsize="large")
     ax.tick_params(which="minor", labelsize="medium", color="c")
 
-    plt.xticks(fontname="Arial")
-    plt.yticks(fontname="Arial")
+    plt.xticks(fontname="HSE Sans")
+    plt.yticks(fontname="HSE Sans")
 
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
 
-    ax.set_ylabel(ylabel, fontsize="xx-large", fontname="Arial")
-    ax.set_xlabel(xlabel, fontsize="xx-large", fontname="Arial",)
-    ax.set_title(title, fontsize="xx-large", fontname="Arial")
+    ax.set_ylabel(ylabel, fontsize="xx-large", fontname="HSE Sans")
+    ax.set_xlabel(xlabel, fontsize="xx-large", fontname="HSE Sans",)
+    ax.set_title(title, fontsize="xx-large", fontname="HSE Sans")
     if logscalex:
         ax.set_xscale("log")
     if logscaley:
@@ -156,9 +157,9 @@ def subplots(
         ax.tick_params(which="both", width=2)
         ax.tick_params(which="major", labelsize=24, length=12)
         ax.tick_params(which="minor", labelsize=12, length=6, color="c")
-        ax.set_ylabel(yy, fontsize=32, fontname="Arial")
-        ax.set_xlabel(xx, fontsize=32, fontname="Arial")
-        ax.set_title(ttl, fontsize=32, fontname="Arial")
+        ax.set_ylabel(yy, fontsize=32, fontname="HSE Sans")
+        ax.set_xlabel(xx, fontsize=32, fontname="HSE Sans")
+        ax.set_title(ttl, fontsize=32, fontname="HSE Sans")
         ax.grid(which="major", color="k")
         ax.grid(which="minor", color="gray", linestyle=":")
 
