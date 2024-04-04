@@ -156,7 +156,17 @@ def bitmaps_to_points(
         
         ref3, ref4 = ref1 + mapsizeX, ref2 + mapsizeY
         B_s = dataMap[ref2:ref4, ref1:ref3]
-        plot.imshow(B_s)
+        im = plot.imshow(B_s, origin='lower',
+                    extent=np.array([-ref1+centerX, -ref3+centerX, -ref2+centerY, -ref4+centerY])*d_pixel,
+                    aspect='equal', cmap='inferno')
+        cbar = plt.colorbar(im, ax=plot, location='right')
+        cbar.ax.set_ylabel("B_z, Гаусс",
+                           size='medium')
+        cbar.ax.tick_params(labelsize='small', direction='in')
+        plot.set_ylabel('Y, м')
+        plot.set_title('Магнитограмма активной области')
+       
+
     if returnhdr:
         return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
     else:
