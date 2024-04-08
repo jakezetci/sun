@@ -30,9 +30,9 @@ frequency = '6h'  # частота расчётов h - hour min - minute; да�
 start_time = '00:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
-energy_fname = f'energy_{noaa_ar}_dens={density}_const.txt'
-date_fname = f'dates_{noaa_ar}_dens{density}_const.txt'
-loc_fname = f'locs_{noaa_ar}_dens{density}_const.txt'
+energy_fname = f'data/energy_{noaa_ar}_dens={density}_const.txt'
+date_fname = f'data/dates_{noaa_ar}_dens{density}_const.txt'
+loc_fname = f'data/locs_{noaa_ar}_dens{density}_const.txt'
 
 
 if __name__ == '__main__':
