@@ -102,22 +102,18 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         matplotlib.rcParams.update({'font.size': 21})
         matplotlib.rcParams.update({'font.family': 'HSE Sans'})
 
-        """
+        
         fig, (ax1, ax2) = plt.subplots(2, 1,
                                        squeeze=True,
                                        figsize=(11,12),
                                        sharex=True,
                                        gridspec_kw={'height_ratios':[1,1],
                                                     })
-        """
-        fig, ax2 = plt.subplots(1,1, figsize=(16, 9))
+        
+        #fig, ax2 = plt.subplots(1,1, figsize=(16, 9))
         ax2.set_xlabel('X, m')
         ax2.set_ylabel('Z, m')
         ax2.set_title('Проекция расчётного куба X-Z')
-        ax1 = False
-
-        
-        #ax1, ax2 = False, False
 
     else:
         ax1, ax2 = False, False
@@ -144,7 +140,6 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     y0 = ys_unique[np.argsort(ys_unique)[len(ys_unique)//2]]
     # N_y0 = np.count_nonzero(valid_points[:, 1] == y0)
     points_to_display, vectors = [], []
-    # nan_start = 3620541
 
     shared_data = shared_data_class(values, points, areas, y0)
 
@@ -199,8 +194,9 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         plt.plot(x, z_r, label='поверхность фотосферы', lw=2)
         plt.legend(loc='lower right')
         fig.savefig('temp.png')
-        
-        plt.show()
+        alert_bot('посчитана картинка:', 'temp.png')
+
+        #plt.show()
 
 
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
@@ -212,7 +208,6 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
 def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
                          onlyactive=True):
     """calculates energy of one single active region provided
-    MAIN FUNCTION 
 
     Args:
         bitmap_path (_type_): _description_
