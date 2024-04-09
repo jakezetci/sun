@@ -47,7 +47,7 @@ def bitmap_pixel_to_map(index, reference1, reference2):
 
 def bitmaps_to_points(
     TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
-    returnhdr=False, plot=False,
+    returnhdr=False, plot=False, instrument=None,
 ):
     """
     takes data from bitmaps and returns them as a 2d array of coordinates and B-values
@@ -70,6 +70,8 @@ def bitmaps_to_points(
     values, points, areas
 
     """
+    
+
     def area_simple(xindex, yindex):
 
         # rotating to the first quadrant
@@ -93,7 +95,7 @@ def bitmaps_to_points(
         return area
 
     if downloaded is False:
-        magnetogram, bitmaps = download_map_and_harp(TIME, TIME)
+        magnetogram, bitmaps = download_map_and_harp(TIME, TIME, instrument)
     if isinstance(magnetogram, Iterable):
         magnetogram = np.asarray(magnetogram)
         MAP = fits.open(magnetogram[0])
@@ -137,8 +139,12 @@ def bitmaps_to_points(
             quiet_indeces = np.argwhere(databitmap == 33)
             active_indeces = np.vstack([active_indeces, quiet_indeces])
         active_onmap = bitmap_pixel_to_map(active_indeces, ref1, ref2)
-        mapsizeX, mapsizeY = int(hdrbitmap['CRSIZE1']), int(hdrbitmap['CRSIZE2'])
-
+        try:
+            mapsizeX, mapsizeY = int(hdrbitmap['CRSIZE1']), int(hdrbitmap['CRSIZE2'])
+        except KeyError:
+            mapsizeY, mapsizeX = np.shape(databitmap)
+            hdrbitmap['CRSIZE1'] = mapsizeX
+            hdrbitmap['CRSIZE2'] = mapsizeY
         for xindex, yindex in active_indeces:
             # plt.plot(yindex, xindex, 'o', ms=4, color='pink')
             tic = time.perf_counter()
@@ -252,9 +258,20 @@ def bitmaps_to_points_slow(
         return np.array(values), np.array(points), np.array(areas)
 
 
-def download_map_and_harp(timestart, timeend, **HARPkeywords):
-    series_M = "hmi.M_720s"
-    series_bitmap = "hmi.Mharp_720s"
+def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
+    if instrument is None:
+        timeHMI = np.datetime64('2010-05-01T00:00')
+        if np.datetime64(timestart) > timeHMI:
+            instrument = 'HMI'
+        else:
+            instrument = 'MDI'            
+    
+    if instrument == 'HMI':
+        series_M = "hmi.M_720s"
+        series_bitmap = "hmi.Mharp_720s"
+    else:
+        series_M = 'mdi.fd_M_96m_lev182'
+        series_bitmap = 'mdi.lostarp_96m'
     res_bitmap = Fido.search(
         a.Time(timestart, timeend),
         a.jsoc.Series(series_M),
