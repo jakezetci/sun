@@ -15,6 +15,7 @@ from astropy.coordinates import frame_transform_graph
 import sunpy.coordinates as spc
 import astropy.coordinates as coord
 from astropy.io import fits
+import computing
 
 
 date = '2011-02-11'
@@ -112,7 +113,13 @@ def gong_output(gong_map, nrho, rss):
     return pfsspy.pfss(pfss_in)
 
 
-def get_energy_pffs(pfss_output, NOAA_AR):
+def get_energy_pffs(time, pfss_output, NOAA_AR, density):
+    values, points, areas, hdrs, (cX, cY) = computing.bitmaps_to_points(TIME=time,
+                                                                        onlyactive=True,
+                                                                        returnhdr=True,
+                                                                        plot=False)
+    grid = computing.create_3Dgrid(hdrs[0], density, cX, cY, mode='fineZ')
+    # turn points to heliocentric cartesian astropy coors
     return 0
 
 
