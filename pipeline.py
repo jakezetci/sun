@@ -258,7 +258,8 @@ def bitmaps_to_points_slow(
         return np.array(values), np.array(points), np.array(areas)
 
 
-def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
+def download_map_and_harp(timestart, timeend, instrument=None,
+                          returnAR=False, **HARPkeywords):
     if instrument is None:
         timeHMI = np.datetime64('2010-05-01T00:00')
         if np.datetime64(timestart) > timeHMI:
@@ -298,6 +299,17 @@ def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
 
     res_bitmap = Fido.search(*HARP_args)
     downloaded_bitmaps = Fido.fetch(res_bitmap).data
+    if returnAR:
+        ar_nums = {}
+        for name in downloaded_bitmaps:
+            bitmap = fits.open(name)
+            noaa = bitmap[-1].header['NOAA_AR']
+            if instrument == "HMI":
+                harp = bitmap[-1].header['HARPNUM']
+            else:
+                harp = bitmap[-1].header['TARPNUM']
+            ar_nums[noaa] = harp
+        return downloaded_magnetogram, downloaded_bitmaps, ar_nums
     return downloaded_magnetogram, downloaded_bitmaps
 
 

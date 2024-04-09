@@ -2,7 +2,7 @@
 """
 Created on Tue Sep 19 21:22:29 2023
 
-@author: cosbo
+Module that focuses on computing
 """
 
 import numpy as np
