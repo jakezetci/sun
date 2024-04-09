@@ -23,10 +23,10 @@ alerts = True
 N = 16  # количество временных точек
 density = 4  # пикселей на один объёмный куб
 day = 13  # начальная дата
-year = 2011
+year = 2009
 month = '02'
-noaa_ar = 11158  # номер активной области
-frequency = '6h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
+noaa_ar = 11012  # номер активной области
+frequency = '96min'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
 start_time = '00:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
@@ -62,13 +62,14 @@ if __name__ == '__main__':
 
     dates = np.datetime_as_string(dates, unit='s')
 
-    # __magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
+    #__magnetogram_path, __bitmap_path = pipeline.download_map_and_harp(
     #        dates[0], dates[-1], NOAA_AR=noaa_ar)
     # быстрее выходит скачивать сразу много файлов
 
     failed_counter = 0
     xs, ys = [], []
     for i in range(start, N):
+
         date = dates[i]
         print(date)
         try:
@@ -77,12 +78,18 @@ if __name__ == '__main__':
             magnetogram_path = [pipeline.file_name(
                 date, 'hmi.m_720s', general_path=home_path)]
         except FileNotFoundError:
-            dts = np.loadtxt(
-                date_fname, dtype=np.datetime64)
-            np.savetxt(date_fname, np.delete(
-                dts, i - failed_counter), fmt='%s')
-            failed_counter += 1
-            continue
+            try:
+                bitmap_path = [pipeline.file_name(
+                    date, 'mdi.lostarp_96m', general_path=home_path)]
+                magnetogram_path = [pipeline.file_name(
+                    date, 'mdi.fd_m_96m_lev182', general_path=home_path)]
+            except FileNotFoundError:
+                dts = np.loadtxt(
+                    date_fname, dtype=np.datetime64)
+                np.savetxt(date_fname, np.delete(
+                    dts, i - failed_counter), fmt='%s')
+                failed_counter += 1
+                continue
 
         energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
                                            onlyactive=True, mode='fineZ', 
