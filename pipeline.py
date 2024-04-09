@@ -272,7 +272,7 @@ def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
     else:
         series_M = 'mdi.fd_M_96m_lev182'
         series_bitmap = 'mdi.lostarp_96m'
-    res_bitmap = Fido.search(
+    res_M = Fido.search(
         a.Time(timestart, timeend),
         a.jsoc.Series(series_M),
         a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
@@ -280,7 +280,7 @@ def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
     result = None
     while result is None:
         try:
-            downloaded_magnetogram = Fido.fetch(res_bitmap).data
+            downloaded_magnetogram = Fido.fetch(res_M).data
             result = True
         except urllib.error.URLError:
             print('error in downloading')
@@ -296,8 +296,8 @@ def download_map_and_harp(timestart, timeend, instrument=None, **HARPkeywords):
     for key, value in HARPkeywords.items():
         HARP_args.append(a.jsoc.Keyword(key) == value)
 
-    res_M = Fido.search(*HARP_args)
-    downloaded_bitmaps = Fido.fetch(res_M).data
+    res_bitmap = Fido.search(*HARP_args)
+    downloaded_bitmaps = Fido.fetch(res_bitmap).data
     return downloaded_magnetogram, downloaded_bitmaps
 
 
