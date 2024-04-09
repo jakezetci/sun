@@ -259,7 +259,7 @@ def bitmaps_to_points_slow(
 
 
 def download_map_and_harp(timestart, timeend, instrument=None,
-                          returnAR=False, **HARPkeywords):
+                          returnAR=False, path=None, **HARPkeywords):
     if instrument is None:
         timeHMI = np.datetime64('2010-05-01T00:00')
         if np.datetime64(timestart) > timeHMI:
@@ -281,7 +281,7 @@ def download_map_and_harp(timestart, timeend, instrument=None,
     result = None
     while result is None:
         try:
-            downloaded_magnetogram = Fido.fetch(res_M).data
+            downloaded_magnetogram = Fido.fetch(res_M, path=path).data
             result = True
         except urllib.error.URLError:
             print('error in downloading')
@@ -298,7 +298,15 @@ def download_map_and_harp(timestart, timeend, instrument=None,
         HARP_args.append(a.jsoc.Keyword(key) == value)
 
     res_bitmap = Fido.search(*HARP_args)
-    downloaded_bitmaps = Fido.fetch(res_bitmap).data
+    result = None
+    while result is None:
+        try:
+            downloaded_bitmaps = Fido.fetch(res_bitmap, path=path).data
+            result = True
+        except urllib.error.URLError:
+            print('error in downloading')
+            pass
+
     if returnAR:
         ar_nums = {}
         for name in downloaded_bitmaps:

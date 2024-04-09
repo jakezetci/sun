@@ -18,9 +18,7 @@ density = 7 #chosen from tests :) although i would prefer 3
 date_start, date_end = '2011-02-11', '2011-02-11'
 
 __magnetogram_path, __bitmap_path, noaa_ars = pipeline.download_map_and_harp(
-        date_start, date_end, returnAR=True)
-
-print(noaa_ars)
+        date_start, date_end, path="D:\\jsocdata", returnAR=True)
 
 for noaa, harp in noaa_ars.items():
     pathlib.Path().mkdir(parents=True, exist_ok=True)
