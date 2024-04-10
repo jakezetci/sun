@@ -13,36 +13,35 @@ import astropy.units as u
 import sunpy.map.sources
 import urllib
 import os
-from collections.abc import Iterable 
+from collections.abc import Iterable
 import matplotlib.pyplot as plt
 
 
-from coordinates import xyz2ll, xyR2xyz, Coordinates
+from coordinates import xyz2ll, xyR2xyz, Coordinates, xyz2pt
 from lib import Grid, B_comp
 
 import time
 
 
-
 def arcsecs_to_radian(arcsecs):
     return np.radians(arcsecs / 3600)
+
 
 def file_name(time, series, general_path=r"C:/Users/cosbo/sunpy/data"):
     time_f = time.replace(':', '').replace('-', '').replace('T', '_')
 
-    
     files = os.listdir(general_path)
 
     for file in files:
         if series in file and time_f in file:
             return general_path + '/' + file
-    
+
     raise FileNotFoundError
+
 
 def bitmap_pixel_to_map(index, reference1, reference2):
     correction = np.full_like(index, [reference2, reference1])
     return index+correction
-
 
 
 def bitmaps_to_points(
@@ -73,6 +72,7 @@ def bitmaps_to_points(
     
 
     def area_simple(xindex, yindex):
+    def area_simple_outdated(xindex, yindex):
 
         # rotating to the first quadrant
         if xindex >= 0 and yindex < 0:
@@ -83,7 +83,6 @@ def bitmaps_to_points(
             xindex, yindex = yindex, -xindex
         elif xindex >= 0 and yindex >= 0:
             xindex, yindex = xindex, yindex
-
         tic = time.perf_counter()
         tan_dif = (np.arctan2(yindex + 1, xindex + 1) -
                    np.arctan2(yindex, xindex))
@@ -94,6 +93,12 @@ def bitmaps_to_points(
         # print(f'{toc-tic:.4} sec, {area}')
         return area
 
+    def area_simple(xindex, yindex):
+        x, y = xindex * d_pixel, yindex * d_pixel
+        r, phi, theta = xyz2pt(*xyR2xyz(x, y, r_sun))
+
+        return d_pixel**2 / np.cos(theta)
+
     if downloaded is False:
         magnetogram, bitmaps = download_map_and_harp(TIME, TIME, instrument)
     if isinstance(magnetogram, Iterable):
@@ -103,7 +108,7 @@ def bitmaps_to_points(
         MAP = fits.open(magnetogram)
 
     dataMap, hdrMap = MAP[1].data, MAP[1].header
-    #HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
+    # HMIMAP = sunpy.map.sources.HMIMap(dataMap, hdrMap)
     dOBS = hdrMap["DSUN_OBS"]
     pxsizeX, pxsizeY = hdrMap["CDELT1"], hdrMap["CDELT2"]
 
@@ -114,7 +119,7 @@ def bitmaps_to_points(
 
     r_sun = hdrMap["RSUN_REF"]
     d_r_ratio = (d_pixel / r_sun)
-    d_r_ratio = d_r_ratio**2
+    # d_r_ratio = d_r_ratio**2
 
     centerX, centerY = hdrMap["CRPIX1"], hdrMap["CRPIX2"]
 
@@ -159,19 +164,19 @@ def bitmaps_to_points(
             values.append(B)
             areas.append(area_simple(x_corr, y_corr))
     if plot is not False:
-        
+
         ref3, ref4 = ref1 + mapsizeX, ref2 + mapsizeY
         B_s = dataMap[ref2:ref4, ref1:ref3]
         im = plot.imshow(B_s, origin='lower',
-                    extent=np.array([-ref1+centerX, -ref3+centerX, -ref2+centerY, -ref4+centerY])*d_pixel,
-                    aspect='equal', cmap='inferno')
+                         extent=np.array(
+                             [-ref1+centerX, -ref3+centerX, -ref2+centerY, -ref4+centerY])*d_pixel,
+                         aspect='equal', cmap='inferno')
         cbar = plt.colorbar(im, ax=plot, location='right')
         cbar.ax.set_ylabel("B_z, Гаусс",
                            size='medium')
         cbar.ax.tick_params(labelsize='small', direction='in')
         plot.set_ylabel('Y, м')
         plot.set_title('Магнитограмма активной области')
-       
 
     if returnhdr:
         return np.array(values), np.array(points), np.array(areas), headers, (centerX, centerY)
@@ -288,7 +293,6 @@ def download_map_and_harp(timestart, timeend, instrument=None,
         except urllib.error.URLError:
             print('error in downloading')
             pass
-
 
     HARP_args = [a.Time(timestart, timeend),
                  a.jsoc.Series(series_bitmap),

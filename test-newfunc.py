@@ -21,13 +21,13 @@ alerts = True
 
 
 N = 16  # количество временных точек
-density = 4  # пикселей на один объёмный куб
+density = 9  # пикселей на один объёмный куб
 day = 13  # начальная дата
 year = 2009
 month = '02'
-noaa_ar = 11012  # номер активной области
-frequency = '96min'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
-start_time = '00:00:00'
+noaa_ar = 11158  # номер активной области
+frequency = '4h'  # частота расчётов h - hour min - minute; данные приходят раз в 12 минут
+start_time = '16:00:00'
 home_path = os.path.expanduser("~") + '\\sunpy\\data'
 
 energy_fname = f'data/energy_{noaa_ar}_dens={density}_const.txt'
@@ -37,13 +37,13 @@ loc_fname = f'data/locs_{noaa_ar}_dens{density}_const.txt'
 
 if __name__ == '__main__':
 
-    #dates_total = pd.date_range(start=f"{year}-{month}-{day} {start_time}",
+    # dates_total = pd.date_range(start=f"{year}-{month}-{day} {start_time}",
     #                      freq=frequency, periods=N).values
     #
-    #dates_old = np.loadtxt(
+    # dates_old = np.loadtxt(
     #            f'dates_{noaa_ar}_{day}_dens{density}_const.txt', dtype=np.datetime64)
     #
-    #dates = np.setdiff1d(dates_total, dates_old)
+    # dates = np.setdiff1d(dates_total, dates_old)
     dates = pd.date_range(start=f"{year}-{month}-{day} {start_time}",
                           freq=frequency, periods=N).values
 
@@ -93,13 +93,12 @@ if __name__ == '__main__':
                 continue
 
         energy, x, y = computing.mp_energy(bitmap_path, magnetogram_path, density=density,
-                                           onlyactive=True, mode='fineZ', 
+                                           onlyactive=True, mode='fineZ',
                                            follow_flux=False)
-        
-        
+
         print(f'{date} - {energy}')
         energys = np.append(energys, energy)
-        #continue
+        # continue
         if alerts:
             computing.alert_bot(f'{date} - {energy}')
 

@@ -64,7 +64,7 @@ def __mponecube_adaptive(arg_array):
     vector = np.array([x, y, z])
     B = cpp.b_comp(vector, values, points, areas)
     if vector[1] == y0:
-       return np.inner(B, B)*volume, vector
+        return np.inner(B, B)*volume, vector
 
     return np.inner(B, B) * volume
 
@@ -124,10 +124,11 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True,
                                                               plot=ax1)
-    
-    area = (696000000**2 / (4096*4096) ) *np.pi * 16
-    areas = np.full_like(areas, area)
-    
+
+    area = (696000000**2 / (2024*2024)) * np.pi
+
+    # areas = np.full_like(areas, area)
+
     if follow_flux:
         return np.inner(np.abs(values), areas)
     grid = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
@@ -158,10 +159,10 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     with tqdm(total=np.shape(valid_points)[0], maxinterval=0.1) as pbar:
         for res in pool.imap(func, valid_points):
             if isinstance(res, Iterable):
-               vector = res[1]
-               res = res[0]
-               points_to_display.append(res)
-               vectors.append([vector[0], vector[2]])
+                vector = res[1]
+                res = res[0]
+                points_to_display.append(res)
+                vectors.append([vector[0], vector[2]])
             if np.isnan(res):
                 print('nan happened')
                 pass
@@ -179,17 +180,17 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         return energy / (8*np.pi), grid.loc_x, grid.loc_y
     elif mode == 'fineZ':
 
-        #alert_bot('посчитана картинка:', 'temp.png')
+        # alert_bot('посчитана картинка:', 'temp.png')
         return energy / (8*np.pi), grid.loc_x, grid.loc_y
 
     elif mode == 'plot':
         x, y = np.asarray(vectors).T
         x = -x
         tt = ax2.scatter(x, y, c=points_to_display, alpha=0.6,
-                    norm=matplotlib.colors.LogNorm())
+                         norm=matplotlib.colors.LogNorm())
         cbar2 = plt.colorbar(tt, ax=ax2, location='right')
         cbar2.ax.set_ylabel("локальная плотность энергии",
-                           size='medium')
+                            size='medium')
         z_r = np.sqrt(696000000**2 - y0**2 - x**2)
         plt.plot(x, z_r, label='поверхность фотосферы', lw=2)
         plt.legend(loc='lower right')
@@ -383,38 +384,37 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
 
     extra_n = np.min((mapsizeX, mapsizeY))
     tilt_x, tilt_y = tilt(bitmapcenterX-cX), tilt(bitmapcenterY-cY)
-    
-    
+
     pixel_xs = np.linspace(start=ref1, stop=ref1 +
                            mapsizeX, num=int(mapsizeX//density))
     pixel_ys = np.linspace(start=ref2, stop=ref2 +
                            mapsizeY, num=int(mapsizeY//density))
-    
+
     if tilt_x < 0:
-        appendix = np.linspace(ref1+mapsizeX, ref1+mapsizeX+extra_n*np.abs(tilt_x), num = int(np.abs(tilt_x)*extra_n//density))
-        pixel_xs = np.append(pixel_xs,appendix)
+        appendix = np.linspace(ref1+mapsizeX, ref1+mapsizeX+extra_n *
+                               np.abs(tilt_x), num=int(np.abs(tilt_x)*extra_n//density))
+        pixel_xs = np.append(pixel_xs, appendix)
     else:
-        appendix = np.linspace(ref1, ref1-extra_n*np.abs(tilt_x), num = int(np.abs(tilt_x)*extra_n//density))
-        pixel_xs = np.append(pixel_xs,appendix)   
-    
+        appendix = np.linspace(
+            ref1, ref1-extra_n*np.abs(tilt_x), num=int(np.abs(tilt_x)*extra_n//density))
+        pixel_xs = np.append(pixel_xs, appendix)
+
     if tilt_y < 0:
-        
-        appendix = np.linspace(ref2+mapsizeY, ref2+mapsizeY*np.abs(tilt_y), num = int(np.abs(tilt_y)*extra_n//density))
-        pixel_ys = np.append(pixel_ys,appendix)
+
+        appendix = np.linspace(ref2+mapsizeY, ref2+mapsizeY *
+                               np.abs(tilt_y), num=int(np.abs(tilt_y)*extra_n//density))
+        pixel_ys = np.append(pixel_ys, appendix)
     else:
-        appendix = np.linspace(ref2, ref2-extra_n*np.abs(tilt_y), num = int(np.abs(tilt_y)*extra_n//density))
-        pixel_ys = np.append(pixel_ys,appendix)
-    
+        appendix = np.linspace(
+            ref2, ref2-extra_n*np.abs(tilt_y), num=int(np.abs(tilt_y)*extra_n//density))
+        pixel_ys = np.append(pixel_ys, appendix)
 
     loc_x, loc_y = -(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel
     xs_unique = -(pixel_xs-cX) * d_pixel
     ys_unique = -(pixel_ys-cY) * d_pixel
 
-    #xs_unique = xs_unique + d_pixel/np.pi #shift to avoid nans
-    #ys_unique = ys_unique + d_pixel/np.pi #shift
-
-    
-
+    # xs_unique = xs_unique + d_pixel/np.pi #shift to avoid nans
+    # ys_unique = ys_unique + d_pixel/np.pi #shift
 
     if mode == 'default':
         z_num = np.min([mapsizeX, mapsizeY])
@@ -424,7 +424,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
         zs_unique = np.linspace(z, z+z_size, num=int(z_num//density))
     elif mode == 'opti' or mode == 'track_loc' or mode == 'plot':
         z_num = np.min([mapsizeX, mapsizeY])
-        z_size = z_num*d_pixel 
+        z_size = z_num*d_pixel
         __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
                               r_sun)
         zs_unique = np.linspace(z, z+z_size, num=int(z_num//(density)))
@@ -443,7 +443,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
     elif mode == 'fineZ':
         xs, ys = np.meshgrid(xs_unique, ys_unique)
         xs, ys = xs.flatten(), ys.flatten()
-        z_num = int(np.max([mapsizeX, mapsizeY])//(density * 2) *2)
+        z_num = int(np.max([mapsizeX, mapsizeY])//(density * 2) * 2)
 
         z_size = z_num*d_pixel
         xyz = np.zeros((z_num * len(xs), 3))
