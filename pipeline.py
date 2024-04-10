@@ -259,7 +259,9 @@ def bitmaps_to_points_slow(
 
 
 def download_map_and_harp(timestart, timeend, instrument=None,
-                          returnAR=False, path=None, **HARPkeywords):
+                          returnAR=False, path=None,
+                          limitlon=90,
+                          **HARPkeywords):
     if instrument is None:
         timeHMI = np.datetime64('2010-05-01T00:00')
         if np.datetime64(timestart) > timeHMI:
@@ -296,6 +298,8 @@ def download_map_and_harp(timestart, timeend, instrument=None,
 
     for key, value in HARPkeywords.items():
         HARP_args.append(a.jsoc.Keyword(key) == value)
+    HARP_args.append(a.jsoc.Keyword('LON_MAX') < limitlon)
+    HARP_args.append(a.jsoc.Keyword('LON_MIN') > -limitlon)
 
     res_bitmap = Fido.search(*HARP_args)
     result = None
