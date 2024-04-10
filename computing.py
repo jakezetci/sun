@@ -204,6 +204,18 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
     else:
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
 
+`def mp_return_cube(bitmap_path, magnetogram_path, density=5,
+              onlyactive=True, threads=mp.cpu_count(), mode='default'):
+    values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
+                                                              bitmaps=bitmap_path,
+                                                              magnetogram=magnetogram_path,
+                                                              onlyactive=onlyactive,
+                                                              returnhdr=True)
+    area = (696000000**2 / (4096*4096) ) *np.pi * 16
+    areas = np.full_like(areas, area)
+    
+    return 0
+
 
 def single_bitmap_energy(bitmap_path, magnetogram_path, density=5,
                          onlyactive=True):
