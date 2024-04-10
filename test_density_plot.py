@@ -19,7 +19,7 @@ if __name__ == "__main__":
     density_array = np.hstack((np.linspace(1, 10, num=10-1), np.linspace(10.125, 20.125, 9)))
     print(density_array)
     ideal = np.loadtxt(
-        f'energys_11158_density={density_array[1]}, day=13_test2.txt')
+        f'time_test/energys_11158_density={density_array[1]}, day=13_test2.txt')
     error_mean = []
     cmap = matplotlib.colormaps['GnBu']
     colors = cmap(np.linspace(1,0, num=18))
@@ -27,9 +27,9 @@ if __name__ == "__main__":
 
         try:
             dts = np.loadtxt(
-                f'dates_{noaa_ar}_{day}_dens{j}_test2.txt', dtype=np.datetime64)
+                f'time_test/dates_{noaa_ar}_{day}_dens{j}_test2.txt', dtype=np.datetime64)
             energys = np.loadtxt(
-                f'energys_11158_density={j}, day=13_test2.txt')
+                f'time_test/energys_11158_density={j}, day=13_test2.txt')
 
         except FileNotFoundError:
             continue
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     ax1.plot(density_array[1:], coef[1]*(density_array[1:]-2.125)**coef[0], label=f'y=x^{coef[0]:.2}')
     fig_time, ax_time = plots.config(title='time of density',
                                      xlabel='density', ylabel='time,s')
-    time_spent = np.loadtxt('times_of_density2.txt')
+    time_spent = np.loadtxt('time_test/times_of_density2.txt')
     ax_time.plot(density_array[1:], time_spent, 'o', ms=6)
     def func_time(x, a,b):
         return (x**a) * b + 40
