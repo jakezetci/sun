@@ -71,7 +71,7 @@ def bitmaps_to_points(
     """
     
 
-    def area_simple(xindex, yindex):
+
     def area_simple_outdated(xindex, yindex):
 
         # rotating to the first quadrant
