@@ -152,14 +152,14 @@ def bitmaps_to_points(
             hdrbitmap['CRSIZE2'] = mapsizeY
         for xindex, yindex in active_indeces:
             # plt.plot(yindex, xindex, 'o', ms=4, color='pink')
-            tic = time.perf_counter()
             B = dataMap[xindex+ref2, yindex+ref1]
+            if np.abs(B) > 3500:
+                continue # pass over the oversaturated pixels
             x_corr, y_corr = -(yindex+ref1 - centerX), -(xindex+ref2 - centerY)
 
             x, y = d_pixel * x_corr, d_pixel * y_corr
 
             points.append(xyR2xyz(x, y, r_sun))
-            toc = time.perf_counter()
 
             values.append(B)
             areas.append(area_simple(x_corr, y_corr))
