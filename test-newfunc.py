@@ -73,6 +73,7 @@ if __name__ == '__main__':
         date = dates[i]
         print(date)
         try:
+            series = 'hmi.mharp_720s' + '.' + '' # add harp/tarp number that will be extracted from jsoc responces
             bitmap_path = [pipeline.file_name(
                 date, 'hmi.mharp_720s', general_path=home_path)]
             magnetogram_path = [pipeline.file_name(
