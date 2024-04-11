@@ -1,6 +1,6 @@
 import pfsspy
 import pfsspy.utils
-
+import astropy
 import os
 import numpy as np
 import astropy.units as u
@@ -12,13 +12,15 @@ import pipeline
 import numpy as np
 from astropy.wcs import WCS
 from astropy.coordinates import frame_transform_graph
+from astropy.coordinates import SkyCoord, CartesianRepresentation
+import astropy.constants as const
 import sunpy.coordinates as spc
 import astropy.coordinates as coord
 from astropy.io import fits
 import computing
 
 
-date = '2011-02-11'
+date = '2011-02-13'
 
 # use time for gong maps
 time_hms = 'hh:mm:ss'
@@ -71,6 +73,10 @@ def hmi_output(date, nrho, rss, resample_size=[360, 180],
     header = dict(hdus[0].header)
     header['CUNIT2'] = 'deg'
     header['CDELT2'] = 180 / np.pi * header['CDELT2']
+    t = astropy.time.Time(date)
+    t.format = 'fits'
+    header['DATE-AVG'] = t.value
+    header['BUNIT'] = 'G'
     del header['HGLN_OBS']
 
     # use crot data to repair NaNs
@@ -113,15 +119,32 @@ def gong_output(gong_map, nrho, rss):
     return pfsspy.pfss(pfss_in)
 
 
-def get_energy_pffs(time, pfss_output, NOAA_AR, density):
+def energy_pffs(time, pfss_output, NOAA_AR, density):
     values, points, areas, hdrs, (cX, cY) = computing.bitmaps_to_points(TIME=time,
                                                                         onlyactive=True,
                                                                         returnhdr=True,
-                                                                        plot=False)
+                                                                        plot=False,
+                                                                        instrument="HMI",
+                                                                        NOAA_AR=NOAA_AR)
     grid = computing.create_3Dgrid(hdrs[0], density, cX, cY, mode='fineZ')
     # turn points to heliocentric cartesian astropy coors
-    return 0
+    Bs = np.zeros((grid.num, 3))
+    from tqdm import tqdm
+
+    with tqdm(total=grid.num, maxinterval=0.1, colour='green') as pbar:
+        for i, vector in enumerate(grid.xyz):
+            point_x, point_y, point_z = vector
+            sc = SkyCoord(CartesianRepresentation(point_x * u.m, point_y * u.m, point_z *
+                                                  u.m), obstime=time, frame='heliocentric', observer='earth')
+            sc.representation_type = 'spherical'
+            sc_forpfss = SkyCoord(sc.lon, sc.lat, sc.distance,
+                                  frame=pfss_output.coordinate_frame)
+            B = pfss_output.get_bvec(sc_forpfss, out_type='cartesian')
+            Bs[i] = B
+            pbar.update(1)
+    return B[~np.isnan(B)]
 
 
 if __name__ == "__main__":
-    pfss_out = hmi_output(date, 35, 2.5)
+    pfss_out = hmi_output(date, 100, 3.6, plot_enable=False)
+    energy = energy_pffs(date, pfss_out, 11158, density=5)
