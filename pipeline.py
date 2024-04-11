@@ -46,7 +46,7 @@ def bitmap_pixel_to_map(index, reference1, reference2):
 
 def bitmaps_to_points(
     TIME, onlyactive=True, downloaded=False, magnetogram=None, bitmaps=None,
-    returnhdr=False, plot=False, instrument=None,
+    returnhdr=False, plot=False, instrument=None, **HARPkeywords,
 ):
     """
     takes data from bitmaps and returns them as a 2d array of coordinates and B-values
@@ -69,8 +69,6 @@ def bitmaps_to_points(
     values, points, areas
 
     """
-    
-
 
     def area_simple_outdated(xindex, yindex):
 
@@ -100,7 +98,8 @@ def bitmaps_to_points(
         return d_pixel**2 / np.cos(theta)
 
     if downloaded is False:
-        magnetogram, bitmaps = download_map_and_harp(TIME, TIME, instrument)
+        magnetogram, bitmaps = download_map_and_harp(
+            TIME, TIME, instrument, **HARPkeywords)
     if isinstance(magnetogram, Iterable):
         magnetogram = np.asarray(magnetogram)
         MAP = fits.open(magnetogram[0])
@@ -145,7 +144,8 @@ def bitmaps_to_points(
             active_indeces = np.vstack([active_indeces, quiet_indeces])
         active_onmap = bitmap_pixel_to_map(active_indeces, ref1, ref2)
         try:
-            mapsizeX, mapsizeY = int(hdrbitmap['CRSIZE1']), int(hdrbitmap['CRSIZE2'])
+            mapsizeX, mapsizeY = int(
+                hdrbitmap['CRSIZE1']), int(hdrbitmap['CRSIZE2'])
         except KeyError:
             mapsizeY, mapsizeX = np.shape(databitmap)
             hdrbitmap['CRSIZE1'] = mapsizeX
@@ -154,7 +154,7 @@ def bitmaps_to_points(
             # plt.plot(yindex, xindex, 'o', ms=4, color='pink')
             B = dataMap[xindex+ref2, yindex+ref1]
             if np.abs(B) > 3500:
-                continue # pass over the oversaturated pixels
+                continue  # pass over the oversaturated pixels
             x_corr, y_corr = -(yindex+ref1 - centerX), -(xindex+ref2 - centerY)
 
             x, y = d_pixel * x_corr, d_pixel * y_corr
@@ -272,8 +272,8 @@ def download_map_and_harp(timestart, timeend, instrument=None,
         if np.datetime64(timestart) > timeHMI:
             instrument = 'HMI'
         else:
-            instrument = 'MDI'            
-    
+            instrument = 'MDI'
+
     if instrument == 'HMI':
         series_M = "hmi.M_720s"
         series_bitmap = "hmi.Mharp_720s"
