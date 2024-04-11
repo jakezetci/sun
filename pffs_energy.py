@@ -130,7 +130,7 @@ def energy_pffs(time, pfss_output, NOAA_AR, density):
     # turn points to heliocentric cartesian astropy coors
     Bs = np.zeros((grid.num, 3))
     from tqdm import tqdm
-
+    energy = 0.0
     with tqdm(total=grid.num, maxinterval=0.1, colour='green') as pbar:
         for i, vector in enumerate(grid.xyz):
             point_x, point_y, point_z = vector
@@ -142,9 +142,11 @@ def energy_pffs(time, pfss_output, NOAA_AR, density):
             B = pfss_output.get_bvec(sc_forpfss, out_type='cartesian')
             Bs[i] = B
             pbar.update(1)
-    return B[~np.isnan(B)]
+            energy = energy + np.inner(B, B)
+
+    return energy/(8*np.pi), B[~np.isnan(B)]
 
 
 if __name__ == "__main__":
     pfss_out = hmi_output(date, 100, 3.6, plot_enable=False)
-    energy = energy_pffs(date, pfss_out, 11158, density=5)
+    energy, B = energy_pffs(date, pfss_out, 11158, density=5)
