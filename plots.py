@@ -26,6 +26,7 @@ def config(
     grid=True,
     figsize=(12, 6),
     dpi=100,
+    customfontsize='xx-large',
 ):
     """
     creates a nice standardized base for a matplotlib plot,
@@ -66,11 +67,15 @@ def config(
     fig.set_figheight(figsize[1])
     fig.set_dpi(dpi)
 
-    if grid:
-        ax.grid(which="major", color="k")
+    if grid == 'minor':
+        ax.grid(which="major", color="gray", linestyle=':')
         ax.grid(which="minor", color="gray", linestyle=":")
-    elif grid == "minor":
-        #ax.grid(which="major", color="k", linestyle=':')
+    elif grid == 'major':
+        ax.grid(which="major", color="k")
+
+    elif grid == True:
+
+        ax.grid(which="major", color="k")
         ax.grid(which="minor", color="gray", linestyle=":")
 
     COLOR = "k"
@@ -82,7 +87,8 @@ def config(
     ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
     ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
     ax.tick_params(which="both", width=2)
-    ax.tick_params(which="major", labelsize="large")
+    ax.tick_params(which="major", axis='x', labelsize="x-large")
+    ax.tick_params(which="major", axis='y', labelsize='x-large')
     ax.tick_params(which="minor", labelsize="medium", color="c")
 
     plt.xticks(fontname="HSE Sans")
@@ -91,9 +97,9 @@ def config(
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
 
-    ax.set_ylabel(ylabel, fontsize="xx-large", fontname="HSE Sans")
-    ax.set_xlabel(xlabel, fontsize="xx-large", fontname="HSE Sans",)
-    ax.set_title(title, fontsize="xx-large", fontname="HSE Sans")
+    ax.set_ylabel(ylabel, fontsize=customfontsize, fontname="HSE Sans")
+    ax.set_xlabel(xlabel, fontsize=customfontsize, fontname="HSE Sans",)
+    ax.set_title(title, fontsize=customfontsize, fontname="HSE Sans")
     if logscalex:
         ax.set_xscale("log")
     if logscaley:
