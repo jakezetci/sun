@@ -83,8 +83,9 @@ def __mp_init(shared_data):
 
 
 def mp_energy(bitmap_path, magnetogram_path, density=5,
-              onlyactive=True, threads=mp.cpu_count(), mode='default',
-              follow_flux=False):
+              onlyactive=True, threads=mp.cpu_count(), mode='fineZ',
+              follow_flux=False, instrument=None,
+              noaa_ar=None, date=None):
     """calculates energy of a single active region provided
     ! utilising multiprocessing ! (about 6 times faster)
 
@@ -94,44 +95,52 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         density: pixels in one cube. Defaults to 5.
         onlyactive: if True, only accounts for bitmap=34. if False, also takes bitmap=33. Defaults to True.
         threads: number of CPU threads to use. Defaults to all threads.
-        mode: if 'opti' - boosts up the speed by lowering the number of cubes, 
+        mode: if 'fineZ' - boosts up the speed by creating a fine region at lower Zs, 
                 if 'track_loc' - also returns the position of the active region
+                if 'plot' - saves pictures of the active region in XY and XZ projections, but slows down the process by omitting multiprocessing
+                if 
+    Returns:
+        energy [ergs], x[km], y[km] - x and y correspond to the center of the active region
     """
     if mode == 'plot':
         plt.close()
         matplotlib.rcParams.update({'font.size': 21})
         matplotlib.rcParams.update({'font.family': 'HSE Sans'})
 
-        
         fig, (ax1, ax2) = plt.subplots(2, 1,
                                        squeeze=True,
-                                       figsize=(11,12),
+                                       figsize=(11, 12),
                                        sharex=True,
-                                       gridspec_kw={'height_ratios':[1,1],
+                                       gridspec_kw={'height_ratios': [1, 1],
                                                     })
-        
-        #fig, ax2 = plt.subplots(1,1, figsize=(16, 9))
+
+        # fig, ax2 = plt.subplots(1,1, figsize=(16, 9))
         ax2.set_xlabel('X, m')
         ax2.set_ylabel('Z, m')
-        ax2.set_title('Проекция расчётного куба X-Z')
+        ax2.set_title(f'{noaa_ar}-{date}-{instrument}.png')
 
     else:
         ax1, ax2 = False, False
-
+    # tic = time.perf_counter()
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
                                                               magnetogram=magnetogram_path,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True,
-                                                              plot=ax1)
+                                                              plot=ax1,
+                                                              instrument=instrument)
 
-    area = (696000000**2 / (2024*2024)) * np.pi
-
+    # toc = time.perf_counter()
+    # print(f'time spent on bitmaps to points - {toc-tic:.4}')
     # areas = np.full_like(areas, area)
 
     if follow_flux:
         return np.inner(np.abs(values), areas)
+    # tic = time.perf_counter()
     grid = create_3Dgrid(hdrs[0], density, cX, cY, mode=mode)
+    # toc = time.perf_counter()
+    # print(f'time spent on creating grid - {toc-tic:.4}')
+    # tic = time.perf_counter()
     energy = 0.0
     a = 0
     valid_indeces = np.where(grid.r > a)
@@ -144,36 +153,58 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
 
     shared_data = shared_data_class(values, points, areas, y0)
 
-    pool = mp.Pool(processes=threads,
-                   initializer=__mp_init, initargs=(shared_data, ))
+   # toc = time.perf_counter()
+    # print(f'time spent on some misc - {toc-tic:.4}')
+
+
     energy = 0.0
     func = __mponecube
-    if mode == 'adaptive' or mode == 'fineZ':
+    if mode == 'fineZ' or mode == 'plot':
         func = __mponecube_adaptive
         v = np.array([grid.basic_volume])
         valid_points = np.concatenate([grid.xyz, v.T], axis=1)
         # valid_points = valid_points[nan_start:]
         # r = grid.r[nan_start:]
-
     from tqdm import tqdm
-    with tqdm(total=np.shape(valid_points)[0], maxinterval=0.1) as pbar:
-        for res in pool.imap(func, valid_points):
-            if isinstance(res, Iterable):
-                vector = res[1]
-                res = res[0]
-                points_to_display.append(res)
-                vectors.append([vector[0], vector[2]])
-            if np.isnan(res):
-                print('nan happened')
-                pass
-            else:
-                energy = energy + res
-            pbar.update(1)
-        pool.close()
-        pool.join()
-        pbar.update()
-        time.sleep(1.0)
 
+    if mode == 'plot':
+        __mp_init(shared_data)
+        with tqdm(total=np.shape(valid_points)[0], maxinterval=0.1, colour='#F6C3C3') as pbar:
+            for point in valid_points:
+                res = __mponecube_adaptive(point)           
+                if isinstance(res, Iterable):
+                    vector = res[1]
+                    res = res[0]
+                    points_to_display.append(res)
+                    vectors.append([vector[0], vector[2]])
+                if np.isnan(res):
+                    #print('nan happened')
+                    pass
+                else:
+                    energy = energy + res
+                pbar.update(1)
+    else:
+        pool = mp.Pool(processes=threads,
+               initializer=__mp_init, initargs=(shared_data, ))
+        
+        with tqdm(total=np.shape(valid_points)[0], maxinterval=0.1, colour='#96628C') as pbar:
+            for res in pool.imap(func, valid_points):
+                if isinstance(res, Iterable):
+                    vector = res[1]
+                    res = res[0]
+                    points_to_display.append(res)
+                    vectors.append([vector[0], vector[2]])
+                if np.isnan(res):
+                    #print('nan happened')
+                    pass
+                else:
+                    energy = energy + res
+                pbar.update(1)
+            pool.close()
+            pool.join()
+            pbar.update()
+            time.sleep(1.0)
+    
     if mode == 'track_loc':
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
     elif mode == 'adaptive':
@@ -185,7 +216,7 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
 
     elif mode == 'plot':
         x, y = np.asarray(vectors).T
-        x = -x
+    
         tt = ax2.scatter(x, y, c=points_to_display, alpha=0.6,
                          norm=matplotlib.colors.LogNorm())
         cbar2 = plt.colorbar(tt, ax=ax2, location='right')
@@ -194,27 +225,27 @@ def mp_energy(bitmap_path, magnetogram_path, density=5,
         z_r = np.sqrt(696000000**2 - y0**2 - x**2)
         plt.plot(x, z_r, label='поверхность фотосферы', lw=2)
         plt.legend(loc='lower right')
-        fig.savefig('temp.png')
-        alert_bot('посчитана картинка:', 'temp.png')
+        fig.savefig(f'pics/{noaa_ar}-{date}-{instrument}.png')
+        alert_bot(f'посчитана картинка {instrument}:', f'pics/{noaa_ar}-{date}-{instrument}.png')
 
-        #plt.show()
+        # plt.show()
 
-
-        return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
+        return energy / (8*np.pi), grid.loc_x, grid.loc_y
 
     else:
         return energy * grid.basic_volume/(8*np.pi), grid.loc_x, grid.loc_y
 
+
 def mp_return_cube(bitmap_path, magnetogram_path, density=5,
-              onlyactive=True, threads=mp.cpu_count(), mode='default'):
+                   onlyactive=True, threads=mp.cpu_count(), mode='default'):
     values, points, areas, hdrs, (cX, cY) = bitmaps_to_points(TIME=False, downloaded=True,
                                                               bitmaps=bitmap_path,
                                                               magnetogram=magnetogram_path,
                                                               onlyactive=onlyactive,
                                                               returnhdr=True)
-    area = (696000000**2 / (4096*4096) ) *np.pi * 16
+    area = (696000000**2 / (4096*4096)) * np.pi * 16
     areas = np.full_like(areas, area)
-    
+
     return 0
 
 
@@ -422,7 +453,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
         __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
                               r_sun)
         zs_unique = np.linspace(z, z+z_size, num=int(z_num//density))
-    elif mode == 'opti' or mode == 'track_loc' or mode == 'plot':
+    elif mode == 'opti' or mode == 'track_loc':
         z_num = np.min([mapsizeX, mapsizeY])
         z_size = z_num*d_pixel
         __x, __y, z = xyR2xyz(-(bitmapcenterX-cX)*d_pixel, -(bitmapcenterY-cY) * d_pixel,
@@ -440,7 +471,7 @@ def create_3Dgrid(hdr, density, cX, cY, mode='default'):
         basic_volume[-1] = basic_volume[-2]
         basic_volume = basic_volume * \
             (xs_unique[1]-xs_unique[0]) * (ys_unique[1]-ys_unique[0])
-    elif mode == 'fineZ':
+    elif mode == 'fineZ' or mode == 'plot':
         xs, ys = np.meshgrid(xs_unique, ys_unique)
         xs, ys = xs.flatten(), ys.flatten()
         z_num = int(np.max([mapsizeX, mapsizeY])//(density * 2) * 2)
