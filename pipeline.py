@@ -15,7 +15,7 @@ import urllib
 import os
 from collections.abc import Iterable
 import matplotlib.pyplot as plt
-
+import pandas as pd
 
 from coordinates import xyz2ll, xyR2xyz, Coordinates, xyz2pt
 from lib import Grid, B_comp
@@ -138,7 +138,7 @@ def bitmaps_to_points(
             headers.append(hdrbitmap)
         ref1, ref2 = int(hdrbitmap["CRPIX1"]), int(hdrbitmap["CRPIX2"])
         # plt.plot(ref1, ref2, 'o', ms=12)
-        active_indeces = np.argwhere(databitmap == 34)
+        active_indeces = np.argwhere(databitmap >= 34)
         if onlyactive is False:
             quiet_indeces = np.argwhere(databitmap == 33)
             active_indeces = np.vstack([active_indeces, quiet_indeces])
@@ -170,7 +170,7 @@ def bitmaps_to_points(
         im = plot.imshow(B_s, origin='lower',
                          extent=np.array(
                              [-ref1+centerX, -ref3+centerX, -ref2+centerY, -ref4+centerY])*d_pixel,
-                         aspect='equal', cmap='inferno')
+                         aspect='equal', cmap='hmimag')
         cbar = plt.colorbar(im, ax=plot, location='right')
         cbar.ax.set_ylabel("B_z, Гаусс",
                            size='medium')
@@ -266,6 +266,7 @@ def bitmaps_to_points_slow(
 def download_map_and_harp(timestart, timeend, instrument=None,
                           returnAR=False, path=None,
                           limitlon=90,
+                          freq=None,
                           **HARPkeywords):
     if instrument is None:
         timeHMI = np.datetime64('2010-05-01T00:00')
@@ -280,21 +281,34 @@ def download_map_and_harp(timestart, timeend, instrument=None,
     else:
         series_M = 'mdi.fd_M_96m_lev182'
         series_bitmap = 'mdi.lostarp_96m'
-    res_M = Fido.search(
-        a.Time(timestart, timeend),
-        a.jsoc.Series(series_M),
-        a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
-    )
+    if freq is not None:
+        times = pd.date_range(start=str(timestart),
+                              end=str(timeend),
+                              freq=freq).values
+        times = np.datetime_as_string(times, unit='s')
+        time_query = a.Time(timestart, timestart)
+        for t in times[1:]:
+            time_query |= a.Time(t, t)
+
+    else:
+        time_query = a.Time(timestart, timeend)
+
     result = None
     while result is None:
         try:
+
+            res_M = Fido.search(
+                time_query,
+                a.jsoc.Series(series_M),
+                a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
+            )
             downloaded_magnetogram = Fido.fetch(res_M, path=path).data
             result = True
         except urllib.error.URLError:
             print('error in downloading')
             pass
 
-    HARP_args = [a.Time(timestart, timeend),
+    HARP_args = [time_query,
                  a.jsoc.Series(series_bitmap),
                  a.jsoc.Segment("bitmap"),
                  a.jsoc.Notify("rrzhdanov@edu.hse.ru"),
@@ -305,10 +319,10 @@ def download_map_and_harp(timestart, timeend, instrument=None,
     HARP_args.append(a.jsoc.Keyword('LON_MAX') < limitlon)
     HARP_args.append(a.jsoc.Keyword('LON_MIN') > -limitlon)
 
-    res_bitmap = Fido.search(*HARP_args)
     result = None
     while result is None:
         try:
+            res_bitmap = Fido.search(*HARP_args)
             downloaded_bitmaps = Fido.fetch(res_bitmap, path=path).data
             result = True
         except urllib.error.URLError:
